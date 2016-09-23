@@ -6,11 +6,21 @@ import de.cgrotz.kademlia.node.NodeId;
 import de.cgrotz.kademlia.protocol.Codec;
 import de.cgrotz.kademlia.protocol.Connect;
 import de.cgrotz.kademlia.protocol.FindNode;
+import de.cgrotz.kademlia.protocol.ValueReply;
 import de.cgrotz.kademlia.routing.RoutingTable;
 import de.cgrotz.kademlia.server.KademliaServer;
+import de.cgrotz.kademlia.storage.InMemoryStorage;
+import de.cgrotz.kademlia.storage.LocalStorage;
+import io.netty.util.internal.ConcurrentSet;
 import lombok.Data;
 
+import java.io.UnsupportedEncodingException;
+import java.math.BigInteger;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 /**
  * Created by Christoph on 21.09.2016.
@@ -28,6 +38,7 @@ public class Kademlia {
     private final Codec codec = new Codec();
 
     private final int kValue;
+    private final LocalStorage localStorage;
 
     public Kademlia(NodeId nodeId, String hostname, int port) {
         this.nodeId = nodeId;
@@ -36,9 +47,10 @@ public class Kademlia {
         this.kValue = 20;
 
         this.routingTable = new RoutingTable(kValue, nodeId);
+        this.localStorage =  new InMemoryStorage();
 
         this.client = new KademliaClient(routingTable);
-        this.server = new KademliaServer(port, kValue, routingTable,
+        this.server = new KademliaServer(port, kValue, routingTable, localStorage,
                 Node.builder().id(nodeId).address(hostname).port(port).build());
     }
 
@@ -47,11 +59,11 @@ public class Kademlia {
 
         // FIND_NODE with own IDs to find nearby nodes
         client.send(hostname, port,
-            codec.encode(new FindNode(seqId.incrementAndGet(), nodeId))
+                codec.encode(new FindNode(seqId.incrementAndGet(), nodeId))
         );
 
         // Refresh buckets
-        for(int i = 1; i < NodeId.ID_LENGTH; i++) {
+        for (int i = 1; i < NodeId.ID_LENGTH; i++) {
             // Construct a NodeId that is i bits away from the current node Id
             final NodeId current = this.nodeId.generateNodeIdByDistance(i);
 
@@ -67,6 +79,58 @@ public class Kademlia {
                         }
                     });
 
+        }
+    }
+
+    /**
+     * Put or Update the value in the DHT
+     *
+     * @param key
+     * @param value
+     */
+    public void put(String key, String value) throws InterruptedException {
+        int id = key.hashCode();
+        client.sendFindNode(hostname, port, seqId.incrementAndGet(), new NodeId(id), nodes -> {
+                    nodes.stream().forEach(node -> {
+                        try {
+                            client.sendContentToNode(seqId.incrementAndGet(), node, key,value);
+                        } catch (UnsupportedEncodingException e) {
+                            e.printStackTrace();
+                        }
+                    });
+                });
+    }
+
+    public void get(String key, Consumer<ValueReply> valueReplyConsumer) {
+        BigInteger id = BigInteger.valueOf(key.hashCode());
+
+        if(localStorage.contains(key)) {
+            valueReplyConsumer.accept(new ValueReply(-1,key, localStorage.get(key)));
+        }
+        else {
+            ConcurrentSet<Node> alreadyCheckedNodes = new ConcurrentSet<>();
+            AtomicBoolean found = new AtomicBoolean(false);
+            get(id, found, key, routingTable.getBucketStream()
+                    .flatMap(bucket -> bucket.getNodes().stream())
+                    .sorted((node1, node2) -> node1.getId().getKey().xor(id).abs()
+                            .compareTo(node2.getId().getKey().xor(id).abs()))
+                    .collect(Collectors.toList()), alreadyCheckedNodes, valueReplyConsumer);
+        }
+    }
+
+    private void get(BigInteger id, AtomicBoolean found, String key, List<Node> nodes, ConcurrentSet<Node> alreadyCheckedNodes, Consumer<ValueReply> valueReplyConsumer) {
+        for( Node node : nodes) {
+            if(!alreadyCheckedNodes.contains(node) && !found.get()) {
+                client.sendFindValue(node.getAddress(), node.getPort(), seqId.incrementAndGet(),
+                        key, nodeReply -> get(id, found, key, nodeReply.getNodes(), alreadyCheckedNodes, valueReply -> {
+                            if(!found.get()) {
+                                found.set(true);
+                                valueReplyConsumer.accept(valueReply);
+                            }
+                        }), valueReplyConsumer);
+
+                alreadyCheckedNodes.add(node);
+            }
         }
     }
 }

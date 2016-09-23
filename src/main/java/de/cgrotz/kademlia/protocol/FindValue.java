@@ -14,7 +14,11 @@ import lombok.ToString;
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true)
 public class FindValue extends Message {
-    public FindValue(long seqId) {
+
+    private final String key;
+
+    public FindValue(long seqId, String key) {
         super(MessageType.FIND_VALUE, seqId);
+        this.key = key;
     }
 }

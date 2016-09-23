@@ -13,12 +13,12 @@ import java.util.List;
 @Data
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true)
-public class FindNodeReply extends Message {
+public class NodeReply extends Message {
 
     private final List<Node> nodes;
 
-    public FindNodeReply(long seqId, List<Node> nodes) {
-        super(MessageType.FIND_NODE_REPLY, seqId);
+    public NodeReply(long seqId, List<Node> nodes) {
+        super(MessageType.NODE_REPLY, seqId);
         this.nodes = nodes;
     }
 }

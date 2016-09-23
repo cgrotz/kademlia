@@ -14,8 +14,8 @@ import java.util.TreeSet;
 public class Bucket {
     private final int bucketId;
 
-    private final ConcurrentSet<Node> nodes = new ConcurrentSet<>();
-    private final ConcurrentSet<Node> replacementNodes = new ConcurrentSet<>();
+    private final TreeSet<Node> nodes = new TreeSet<>();
+    private final TreeSet<Node> replacementNodes = new TreeSet<>();
     private final int k;
 
     public Bucket(int k, int bucketId) {
@@ -45,7 +45,9 @@ public class Bucket {
         }
     }
 
-    public ConcurrentSet<Node> getNodes() {
-        return nodes;
+    public TreeSet<Node> getNodes() {
+        TreeSet<Node> set = new TreeSet<>();
+        set.addAll(nodes);
+        return set;
     }
 }

@@ -30,5 +30,11 @@ public class KademliaNodeTest {
         kad3.bootstrap("127.0.0.1", 9001);
         Thread.sleep(1000);
 
+        kad1.put("Key", "Value");
+
+        kad1.get("Key", System.out::println);
+        kad2.get("Key", System.out::println);
+        kad3.get("Key", System.out::println);
+
     }
 }

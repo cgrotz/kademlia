@@ -4,6 +4,7 @@ import de.cgrotz.kademlia.node.Node;
 import de.cgrotz.kademlia.node.NodeId;
 import de.cgrotz.kademlia.protocol.*;
 import de.cgrotz.kademlia.routing.RoutingTable;
+import de.cgrotz.kademlia.storage.LocalStorage;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.DatagramPacket;
@@ -19,11 +20,13 @@ public class KademliaServerHandler extends SimpleChannelInboundHandler<DatagramP
     private final int kValue;
     private Codec codec = new Codec();
     private final Node localNode;
+    private final LocalStorage localStorage;
 
-    public KademliaServerHandler(RoutingTable routingTable, Node localNode, int kValue) {
+    public KademliaServerHandler(RoutingTable routingTable, LocalStorage localStorage, Node localNode, int kValue) {
         this.routingTable = routingTable;
         this.localNode = localNode;
         this.kValue = kValue;
+        this.localStorage = localStorage;
     }
 
     @Override
@@ -39,7 +42,26 @@ public class KademliaServerHandler extends SimpleChannelInboundHandler<DatagramP
         else if(message.getType() == MessageType.FIND_NODE) {
             FindNode findNode = (FindNode) message;
             List<Node> closest = routingTable.findClosest(findNode.getLookupId(), kValue);
-            ctx.writeAndFlush(new DatagramPacket(codec.encode(new FindNodeReply(message.getSeqId(), closest)), packet.sender()));
+
+            ctx.writeAndFlush(new DatagramPacket(codec.encode(new NodeReply(message.getSeqId(), closest)), packet.sender()));
+        }
+        else if(message.getType() == MessageType.FIND_VALUE) {
+            FindValue findValue = (FindValue) message;
+
+            // query local store
+            if(localStorage.contains(findValue.getKey())) {
+                ctx.writeAndFlush(new DatagramPacket(codec.encode(new ValueReply(message.getSeqId(), findValue.getKey(), localStorage.get(findValue.getKey()))), packet.sender()));
+            }
+            else {
+                // Else send list of closest nodes
+                List<Node> closest = routingTable.findClosest(new NodeId(findValue.getKey().hashCode()), kValue);
+                ctx.writeAndFlush(new DatagramPacket(codec.encode(new NodeReply(message.getSeqId(), closest)), packet.sender()));
+            }
+        }
+        else if(message.getType() == MessageType.STORE) {
+            Store store = (Store) message;
+            localStorage.put(store.getKey(), store.getValue());
+            ctx.writeAndFlush(new DatagramPacket(codec.encode(new StoreReply(message.getSeqId())), packet.sender()));
         }
     }
 

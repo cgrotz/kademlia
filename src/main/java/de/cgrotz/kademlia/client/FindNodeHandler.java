@@ -1,38 +1,37 @@
 package de.cgrotz.kademlia.client;
 
+import de.cgrotz.kademlia.node.Node;
 import de.cgrotz.kademlia.protocol.*;
 import de.cgrotz.kademlia.routing.RoutingTable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.DatagramPacket;
 
+import java.util.List;
+import java.util.function.Consumer;
+
+
 /**
- * Created by Christoph on 21.09.2016.
+ * Created by Christoph on 23.09.2016.
  */
-public class KademliaClientHandler extends SimpleChannelInboundHandler<DatagramPacket> {
+public class FindNodeHandler extends SimpleChannelInboundHandler<DatagramPacket> {
+    private final Consumer<List<Node>> callback;
     private Codec codec = new Codec();
 
     private RoutingTable routingTable;
 
-    public KademliaClientHandler(RoutingTable routingTable) {
+    public FindNodeHandler(RoutingTable routingTable, Consumer<List<Node>> callback) {
         this.routingTable = routingTable;
+        this.callback = callback;
     }
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, DatagramPacket packet) throws Exception {
         Message message = codec.decode(packet.content());
-        if(message.getType() == MessageType.ACKNOWLEDGE) {
-            ConnectionAcknowledge connectionAcknowledge = (ConnectionAcknowledge)message;
-            routingTable.addNode(connectionAcknowledge.getNode().getId(),
-                    connectionAcknowledge.getNode().getAddress(),
-                    connectionAcknowledge.getNode().getPort());
-        }
-        else if(message.getType() == MessageType.NODE_REPLY) {
-            NodeReply nodeReply = (NodeReply)message;
+        if (message.getType() == MessageType.NODE_REPLY) {
+            NodeReply nodeReply = (NodeReply) message;
             nodeReply.getNodes().stream().forEach(node -> routingTable.addNode(node.getId(), node.getAddress(), node.getPort()));
-        }
-        else if(message.getType() == MessageType.STORE_REPLY) {
-
+            callback.accept(nodeReply.getNodes());
         }
         ctx.close();
     }

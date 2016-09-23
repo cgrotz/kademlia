@@ -3,6 +3,7 @@ package de.cgrotz.kademlia.server;
 import de.cgrotz.kademlia.node.Node;
 import de.cgrotz.kademlia.node.NodeId;
 import de.cgrotz.kademlia.routing.RoutingTable;
+import de.cgrotz.kademlia.storage.LocalStorage;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -18,11 +19,13 @@ public class KademliaServer {
     private final RoutingTable routingTable;
     private final Node localNode;
     private final int kValue;
+    private final LocalStorage localStorage;
 
-    public KademliaServer(int port, int kValue, RoutingTable routingTable, Node localNode) {
+    public KademliaServer(int port, int kValue, RoutingTable routingTable, LocalStorage localStorage, Node localNode) {
         this.routingTable = routingTable;
         this.localNode = localNode;
         this.kValue = kValue;
+        this.localStorage = localStorage;
 
         this.group = new NioEventLoopGroup();
         new Thread(() -> {
@@ -32,7 +35,7 @@ public class KademliaServer {
                 b.group(group)
                         .channel(NioDatagramChannel.class)
                         .option(ChannelOption.SO_BROADCAST, false)
-                        .handler(new KademliaServerHandler(this.routingTable, this.localNode, this.kValue));
+                        .handler(new KademliaServerHandler(this.routingTable, this.localStorage, this.localNode, this.kValue));
 
                 b.bind(port).sync().channel().closeFuture().await();
             } catch (InterruptedException e) {

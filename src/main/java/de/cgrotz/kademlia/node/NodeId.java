@@ -31,6 +31,10 @@ public class NodeId {
         this.key = key;
     }
 
+    public NodeId(int id) {
+        this.key = BigInteger.valueOf(id);
+    }
+
     public static NodeId random() {
         byte[] bytes = new byte[ID_LENGTH / 8];
         SecureRandom sr1 = new SecureRandom();
