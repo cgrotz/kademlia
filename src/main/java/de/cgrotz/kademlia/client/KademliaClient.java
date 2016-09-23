@@ -1,5 +1,6 @@
 package de.cgrotz.kademlia.client;
 
+import de.cgrotz.kademlia.routing.RoutingTable;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -16,6 +17,12 @@ import java.net.InetSocketAddress;
  */
 public class KademliaClient {
 
+    private RoutingTable routingTable;
+
+    public KademliaClient(RoutingTable routingTable) {
+        this.routingTable = routingTable;
+    }
+
     public void send(String address, int port, ByteBuf buf) throws InterruptedException {
         EventLoopGroup group = new NioEventLoopGroup();
         try {
@@ -23,7 +30,7 @@ public class KademliaClient {
             b.group(group)
                     .channel(NioDatagramChannel.class)
                     .option(ChannelOption.SO_BROADCAST, false)
-                    .handler(new KademliaClientHandler());
+                    .handler(new KademliaClientHandler(routingTable));
 
             Channel channel = b.bind(0).sync().channel();
             channel.writeAndFlush(new DatagramPacket(

@@ -1,5 +1,6 @@
 package de.cgrotz.kademlia.server;
 
+import de.cgrotz.kademlia.node.Node;
 import de.cgrotz.kademlia.node.NodeId;
 import de.cgrotz.kademlia.routing.RoutingTable;
 import io.netty.bootstrap.Bootstrap;
@@ -15,11 +16,13 @@ import lombok.Data;
 public class KademliaServer {
     private final NioEventLoopGroup group;
     private final RoutingTable routingTable;
-    private final NodeId localNodeId;
+    private final Node localNode;
+    private final int kValue;
 
-    public KademliaServer(int port, RoutingTable routingTable, NodeId localNodeId) {
+    public KademliaServer(int port, int kValue, RoutingTable routingTable, Node localNode) {
         this.routingTable = routingTable;
-        this.localNodeId = localNodeId;
+        this.localNode = localNode;
+        this.kValue = kValue;
 
         this.group = new NioEventLoopGroup();
         new Thread(() -> {
@@ -29,7 +32,7 @@ public class KademliaServer {
                 b.group(group)
                         .channel(NioDatagramChannel.class)
                         .option(ChannelOption.SO_BROADCAST, false)
-                        .handler(new KademliaServerHandler(this.routingTable, this.localNodeId));
+                        .handler(new KademliaServerHandler(this.routingTable, this.localNode, this.kValue));
 
                 b.bind(port).sync().channel().closeFuture().await();
             } catch (InterruptedException e) {

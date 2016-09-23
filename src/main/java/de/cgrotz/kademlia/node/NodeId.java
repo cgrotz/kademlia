@@ -16,11 +16,18 @@ public class NodeId {
 
     private BigInteger key;
 
+
     public NodeId(byte[] result) {
+        if(result.length > ID_LENGTH/8 ) {
+            throw new RuntimeException("ID to long. Needs to be  "+ID_LENGTH+"bits long." );
+        }
         this.key = new BigInteger(result);
     }
 
     public NodeId(BigInteger key) {
+        if( key.toByteArray().length > ID_LENGTH/8 ) {
+            throw new RuntimeException("ID to long. Needs to be  "+ID_LENGTH+"bits long." );
+        }
         this.key = key;
     }
 
@@ -44,17 +51,7 @@ public class NodeId {
      */
     public NodeId xor(NodeId nid)
     {
-        byte[] result = new byte[ID_LENGTH / 8];
-        byte[] nidBytes = nid.getKey().toByteArray();
-
-        for (int i = 0; i < ID_LENGTH / 8; i++)
-        {
-            result[i] = (byte) (this.key.toByteArray()[i] ^ nidBytes[i]);
-        }
-
-        NodeId resNid = new NodeId(result);
-
-        return resNid;
+        return new NodeId(nid.getKey().xor(this.key));
     }
 
     /**

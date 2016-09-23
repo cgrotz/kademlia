@@ -11,7 +11,7 @@ import lombok.ToString;
 @Data
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true)
-public class Connect extends Message{
+public class Connect extends Message {
 
     private final String nodeId;
     private final String host;

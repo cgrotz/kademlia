@@ -1,5 +1,6 @@
 package de.cgrotz.kademlia.protocol;
 
+import de.cgrotz.kademlia.node.Node;
 import de.cgrotz.kademlia.node.NodeId;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -13,10 +14,10 @@ import lombok.ToString;
 @EqualsAndHashCode(callSuper = true)
 public class ConnectionAcknowledge extends Message {
 
-    private String nodeId;
+    private Node node;
 
-    public ConnectionAcknowledge(long seqId, NodeId nodeId) {
+    public ConnectionAcknowledge(long seqId, NodeId nodeId, String address, int port) {
         super(MessageType.CONNECT, seqId);
-        this.nodeId = nodeId.toString();
+        this.node = Node.builder().id(nodeId).address(address).port(port).lastSeen(System.currentTimeMillis()).build();
     }
 }

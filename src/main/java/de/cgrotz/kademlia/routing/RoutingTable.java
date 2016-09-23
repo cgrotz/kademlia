@@ -1,8 +1,14 @@
 package de.cgrotz.kademlia.routing;
 
+import de.cgrotz.kademlia.node.Node;
 import de.cgrotz.kademlia.node.NodeId;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Created by Christoph on 21.09.2016.
@@ -13,8 +19,15 @@ public class RoutingTable {
 
     private final NodeId localNodeId;
 
-    public RoutingTable(NodeId localNodeId) {
+    private final Bucket[] buckets;
+
+    public RoutingTable(int k, NodeId localNodeId) {
         this.localNodeId = localNodeId;
+        buckets = new Bucket[NodeId.ID_LENGTH];
+        for (int i = 0; i < NodeId.ID_LENGTH; i++)
+        {
+            buckets[i] = new Bucket(k, i);
+        }
     }
 
     /**
@@ -33,6 +46,21 @@ public class RoutingTable {
     }
 
     public void addNode(NodeId nodeId, String host, int port) {
-        System.out.println("Adding node "+nodeId+"=>"+host+":"+port);
+        buckets[getBucketId(nodeId)].addNode(nodeId, host,port);
+    }
+
+    public Bucket[] getBuckets() {
+        return buckets;
+    }
+
+    public Stream<Bucket> getBucketStream() {
+        return Arrays.stream(buckets);
+    }
+
+    public List<Node> findClosest(NodeId lookupId, int numberOfRequiredNodes) {
+        return getBucketStream().flatMap(bucket -> bucket.getNodes().stream())
+                .sorted((node1,node2) -> node1.getId().getKey().xor(lookupId.getKey()).abs()
+                        .compareTo( node2.getId().getKey().xor(lookupId.getKey()).abs() ))
+                .limit(numberOfRequiredNodes).collect(Collectors.toList());
     }
 }
