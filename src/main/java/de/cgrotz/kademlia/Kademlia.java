@@ -41,7 +41,7 @@ public class Kademlia {
     private final LocalStorage localStorage;
     private final Node localNode;
 
-    public Kademlia(NodeId nodeId, String hostname, int port) {
+    public Kademlia(NodeId nodeId, String hostname, int port) throws InterruptedException {
         this.nodeId = nodeId;
         this.hostname = hostname;
         this.port = port;
@@ -89,11 +89,7 @@ public class Kademlia {
         int id = key.hashCode();
         client.sendFindNode(hostname, port, seqId.incrementAndGet(), new NodeId(id), nodes -> {
                     nodes.stream().forEach(node -> {
-                        try {
-                            client.sendContentToNode(seqId.incrementAndGet(), node, key,value);
-                        } catch (UnsupportedEncodingException e) {
-                            e.printStackTrace();
-                        }
+                        client.sendContentToNode(seqId.incrementAndGet(), node, key,value);
                     });
                 });
     }

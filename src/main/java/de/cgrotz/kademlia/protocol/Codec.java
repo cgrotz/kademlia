@@ -65,69 +65,100 @@ public class Codec {
                     parts[2], parts[3]);
         }
         else {
+            System.out.println("Can't decode message_type="+parts[0]);
             throw new RuntimeException("Unknown message type="+ parts[0]+" message="+ Arrays.toString(parts));
         }
     }
 
-    public ByteBuf encode(Ping ping) {
+    public ByteBuf encode(Ping msg) {
         ByteBuf byteBuf = Unpooled.buffer();
-        byteBuf.writeCharSequence("PING|"+ ping.getSeqId(), CharsetUtil.UTF_8);
-        byteBuf.writeCharSequence("|"+ping.getNodeId().toString(), CharsetUtil.UTF_8);
-        byteBuf.writeCharSequence("|"+ping.getAddress(), CharsetUtil.UTF_8);
-        byteBuf.writeCharSequence("|"+ping.getPort(), CharsetUtil.UTF_8);
+        byteBuf.writeCharSequence(msg.getType().name()+"|"+ msg.getSeqId(), CharsetUtil.UTF_8);
+        byteBuf.writeCharSequence("|"+msg.getNodeId().toString(), CharsetUtil.UTF_8);
+        byteBuf.writeCharSequence("|"+msg.getAddress(), CharsetUtil.UTF_8);
+        byteBuf.writeCharSequence("|"+msg.getPort(), CharsetUtil.UTF_8);
         return byteBuf;
     }
 
-    public ByteBuf encode(Pong pong) {
+    public ByteBuf encode(Pong msg) {
         ByteBuf byteBuf = Unpooled.buffer();
-        byteBuf.writeCharSequence("PONG|"+ pong.getSeqId(), CharsetUtil.UTF_8);
-        byteBuf.writeCharSequence("|"+pong.getNodeId().toString(), CharsetUtil.UTF_8);
-        byteBuf.writeCharSequence("|"+pong.getAddress(), CharsetUtil.UTF_8);
-        byteBuf.writeCharSequence("|"+pong.getPort(), CharsetUtil.UTF_8);
+        byteBuf.writeCharSequence(msg.getType().name()+"|"+ msg.getSeqId(), CharsetUtil.UTF_8);
+        byteBuf.writeCharSequence("|"+msg.getNodeId().toString(), CharsetUtil.UTF_8);
+        byteBuf.writeCharSequence("|"+msg.getAddress(), CharsetUtil.UTF_8);
+        byteBuf.writeCharSequence("|"+msg.getPort(), CharsetUtil.UTF_8);
         return byteBuf;
     }
 
-    public ByteBuf encode(FindNode findNode) {
+    public ByteBuf encode(FindNode msg) {
         ByteBuf byteBuf = Unpooled.buffer();
-        byteBuf.writeCharSequence("FIND_NODE|"+ findNode.getSeqId()+"|"+findNode.getLookupId().toString(), CharsetUtil.UTF_8);
+        byteBuf.writeCharSequence(msg.getType().name()+"|"+ msg.getSeqId()+"|"+msg.getLookupId().toString(), CharsetUtil.UTF_8);
         return byteBuf;
     }
 
-    public ByteBuf encode(NodeReply nodeReply) {
+    public ByteBuf encode(NodeReply msg) {
         ByteBuf byteBuf = Unpooled.buffer();
-        byteBuf.writeCharSequence("NODE_REPLY|"+ nodeReply.getSeqId(), CharsetUtil.UTF_8);
-        for( Node node : nodeReply.getNodes()) {
+        byteBuf.writeCharSequence(msg.getType().name()+"|"+ msg.getSeqId(), CharsetUtil.UTF_8);
+        for( Node node : msg.getNodes()) {
             byteBuf.writeCharSequence( "|"+ node.getId().toString()+":"+node.getAddress()+":"+node.getPort(), CharsetUtil.UTF_8);
         }
         return byteBuf;
     }
 
-    public ByteBuf encode(Store store) throws UnsupportedEncodingException {
+    public ByteBuf encode(Store msg) throws UnsupportedEncodingException {
         ByteBuf byteBuf = Unpooled.buffer();
-        byteBuf.writeCharSequence("STORE|"+ store.getSeqId(), CharsetUtil.UTF_8);
-        byteBuf.writeCharSequence("|"+encoder.encodeToString(store.getKey().getBytes(CharsetUtil.UTF_8.name())), CharsetUtil.UTF_8);
-        byteBuf.writeCharSequence("|"+encoder.encodeToString(store.getValue().getBytes(CharsetUtil.UTF_8.name())), CharsetUtil.UTF_8);
+        byteBuf.writeCharSequence(msg.getType().name()+"|"+ msg.getSeqId(), CharsetUtil.UTF_8);
+        byteBuf.writeCharSequence("|"+encoder.encodeToString(msg.getKey().getBytes(CharsetUtil.UTF_8.name())), CharsetUtil.UTF_8);
+        byteBuf.writeCharSequence("|"+encoder.encodeToString(msg.getValue().getBytes(CharsetUtil.UTF_8.name())), CharsetUtil.UTF_8);
         return byteBuf;
     }
 
-    public ByteBuf encode(StoreReply storeReply) {
+    public ByteBuf encode(StoreReply msg) {
         ByteBuf byteBuf = Unpooled.buffer();
-        byteBuf.writeCharSequence("STORE_REPLY|"+ storeReply.getSeqId(), CharsetUtil.UTF_8);
+        byteBuf.writeCharSequence(msg.getType().name()+"|"+ msg.getSeqId(), CharsetUtil.UTF_8);
         return byteBuf;
     }
 
-    public ByteBuf encode(FindValue findValue) {
+    public ByteBuf encode(FindValue msg) {
         ByteBuf byteBuf = Unpooled.buffer();
-        byteBuf.writeCharSequence("FIND_VALUE|"+ findValue.getSeqId(), CharsetUtil.UTF_8);
-        byteBuf.writeCharSequence("|"+ findValue.getKey(), CharsetUtil.UTF_8);
+        byteBuf.writeCharSequence(msg.getType().name()+"|"+ msg.getSeqId(), CharsetUtil.UTF_8);
+        byteBuf.writeCharSequence("|"+ msg.getKey(), CharsetUtil.UTF_8);
         return byteBuf;
     }
 
-    public ByteBuf encode(ValueReply valueReply) {
+    public ByteBuf encode(ValueReply msg) {
         ByteBuf byteBuf = Unpooled.buffer();
-        byteBuf.writeCharSequence("VALUE_REPLY|"+ valueReply.getSeqId(), CharsetUtil.UTF_8);
-        byteBuf.writeCharSequence("|"+ valueReply.getKey(), CharsetUtil.UTF_8);
-        byteBuf.writeCharSequence("|"+ valueReply.getValue(), CharsetUtil.UTF_8);
+        byteBuf.writeCharSequence(msg.getType().name()+"|"+ msg.getSeqId(), CharsetUtil.UTF_8);
+        byteBuf.writeCharSequence("|"+ msg.getKey(), CharsetUtil.UTF_8);
+        byteBuf.writeCharSequence("|"+ msg.getValue(), CharsetUtil.UTF_8);
         return byteBuf;
+    }
+
+    public ByteBuf encode(Message msg) throws UnsupportedEncodingException {
+        if(msg instanceof ValueReply) {
+            return encode((ValueReply)msg);
+        }
+        else if(msg instanceof FindNode) {
+            return encode((FindNode) msg);
+        }
+        else if(msg instanceof NodeReply) {
+            return encode((NodeReply) msg);
+        }
+        else if(msg instanceof FindValue) {
+            return encode((FindValue) msg);
+        }
+        else if(msg instanceof Store) {
+            return encode((Store) msg);
+        }
+        else if(msg instanceof StoreReply) {
+            return encode((StoreReply) msg);
+        }
+        else if(msg instanceof Ping) {
+            return encode((Ping) msg);
+        }
+        else if(msg instanceof Pong) {
+            return encode((Pong) msg);
+        }
+        else {
+            throw new RuntimeException("Unknown msg type:" + msg);
+        }
     }
 }

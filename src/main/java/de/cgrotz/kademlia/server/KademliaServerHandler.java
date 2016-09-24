@@ -42,7 +42,6 @@ public class KademliaServerHandler extends SimpleChannelInboundHandler<DatagramP
         else if(message.getType() == MessageType.FIND_NODE) {
             FindNode findNode = (FindNode) message;
             List<Node> closest = routingTable.findClosest(findNode.getLookupId(), kValue);
-
             ctx.writeAndFlush(new DatagramPacket(codec.encode(new NodeReply(message.getSeqId(), closest)), packet.sender()));
         }
         else if(message.getType() == MessageType.FIND_VALUE) {
