@@ -102,6 +102,7 @@ public class Kademlia {
     }
 
     public void get(String key, Consumer<ValueReply> valueReplyConsumer) {
+        // using Java's hashCode Algorithm could be a consistency problem
         BigInteger id = BigInteger.valueOf(key.hashCode());
 
         if(localStorage.contains(key)) {
@@ -110,24 +111,23 @@ public class Kademlia {
         else {
             ConcurrentSet<Node> alreadyCheckedNodes = new ConcurrentSet<>();
             AtomicBoolean found = new AtomicBoolean(false);
-            get(id, found, key, routingTable.getBucketStream()
+            get(found, key, routingTable.getBucketStream()
                     .flatMap(bucket -> bucket.getNodes().stream())
                     .sorted((node1, node2) -> node1.getId().getKey().xor(id).abs()
                             .compareTo(node2.getId().getKey().xor(id).abs()))
-                    .collect(Collectors.toList()), alreadyCheckedNodes, valueReplyConsumer);
+                    .collect(Collectors.toList()), alreadyCheckedNodes, valueReply -> {
+                        if(!found.getAndSet(true)) {
+                            valueReplyConsumer.accept(valueReply);
+                        }
+                    });
         }
     }
 
-    private void get(BigInteger id, AtomicBoolean found, String key, List<Node> nodes, ConcurrentSet<Node> alreadyCheckedNodes, Consumer<ValueReply> valueReplyConsumer) {
+    private void get(AtomicBoolean found, String key, List<Node> nodes, ConcurrentSet<Node> alreadyCheckedNodes, Consumer<ValueReply> valueReplyConsumer) {
         for( Node node : nodes) {
             if(!alreadyCheckedNodes.contains(node) && !found.get()) {
                 client.sendFindValue(node.getAddress(), node.getPort(), seqId.incrementAndGet(),
-                        key, nodeReply -> get(id, found, key, nodeReply.getNodes(), alreadyCheckedNodes, valueReply -> {
-                            if(!found.get()) {
-                                found.set(true);
-                                valueReplyConsumer.accept(valueReply);
-                            }
-                        }), valueReplyConsumer);
+                        key, nodeReply -> get(found, key, nodeReply.getNodes(), alreadyCheckedNodes, valueReplyConsumer), valueReplyConsumer);
 
                 alreadyCheckedNodes.add(node);
             }
