@@ -21,13 +21,7 @@ public class KademliaClientHandler extends SimpleChannelInboundHandler<DatagramP
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, DatagramPacket packet) throws Exception {
         Message message = codec.decode(packet.content());
-        if(message.getType() == MessageType.ACKNOWLEDGE) {
-            ConnectionAcknowledge connectionAcknowledge = (ConnectionAcknowledge)message;
-            routingTable.addNode(connectionAcknowledge.getNode().getId(),
-                    connectionAcknowledge.getNode().getAddress(),
-                    connectionAcknowledge.getNode().getPort());
-        }
-        else if(message.getType() == MessageType.NODE_REPLY) {
+        if(message.getType() == MessageType.NODE_REPLY) {
             NodeReply nodeReply = (NodeReply)message;
             nodeReply.getNodes().stream().forEach(node -> routingTable.addNode(node.getId(), node.getAddress(), node.getPort()));
         }

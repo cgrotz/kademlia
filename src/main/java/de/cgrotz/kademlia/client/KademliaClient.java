@@ -27,32 +27,43 @@ public class KademliaClient {
 
     private RoutingTable routingTable;
     private Codec codec = new Codec();
+    private final NodeId localNodeId;
+    private final String localHostName;
+    private final int localPort;
 
-    public KademliaClient(RoutingTable routingTable) {
+    public KademliaClient(NodeId localNodeId, RoutingTable routingTable, String localHostName, int localPort) {
+        this.localNodeId = localNodeId;
         this.routingTable = routingTable;
+        this.localHostName = localHostName;
+        this.localPort = localPort;
     }
 
-    public void send(String address, int port, ByteBuf buf) throws InterruptedException {
+    public void sendPing(String hostname, int port, long seqId) {
         EventLoopGroup group = new NioEventLoopGroup();
         try {
             Bootstrap b = new Bootstrap();
             b.group(group)
                     .channel(NioDatagramChannel.class)
                     .option(ChannelOption.SO_BROADCAST, false)
-                    .handler(new KademliaClientHandler(routingTable));
+                    .handler(new PongHandler(routingTable, pongReply -> {
+                        routingTable.addNode(pongReply.getNodeId(), pongReply.getAddress(), pongReply.getPort());
+                    }));
 
             Channel channel = b.bind(0).sync().channel();
             channel.writeAndFlush(new DatagramPacket(
-                    buf,
-                    new InetSocketAddress(address, port))).sync();
+                    codec.encode(new Ping(seqId, this.localNodeId, this.localHostName, this.localPort)),
+                    new InetSocketAddress(hostname, port))).sync();
 
             if (!channel.closeFuture().await(5000)) {
-                System.err.println("request timed out.");
+                System.err.println("ping request with seqId="+seqId+" on node="+localNodeId+" timed out.");
             }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         } finally {
             group.shutdownGracefully();
         }
     }
+
 
     public void sendFindNode(String hostname, int port, long seqId, NodeId key, Consumer<List<Node>> callback) {
         EventLoopGroup group = new NioEventLoopGroup();
@@ -69,7 +80,7 @@ public class KademliaClient {
                     new InetSocketAddress(hostname, port))).sync();
 
             if (!channel.closeFuture().await(5000)) {
-                System.err.println("request with seqId="+seqId+" timed out.");
+                System.err.println("find_node request with seqId="+seqId+" on node="+localNodeId+" timed out.");
             }
         } catch (InterruptedException e) {
             e.printStackTrace();
@@ -94,7 +105,7 @@ public class KademliaClient {
                     new InetSocketAddress(hostname, port))).sync();
 
             if (!channel.closeFuture().await(5000)) {
-                System.err.println("request with seqId="+seqId+" timed out.");
+                System.err.println("find_value request with seqId="+seqId+" on node="+localNodeId+" timed out.");
             }
         } catch (InterruptedException e) {
             e.printStackTrace();
@@ -118,7 +129,7 @@ public class KademliaClient {
                     new InetSocketAddress(node.getAddress(), node.getPort()))).sync();
 
             if (!channel.closeFuture().await(5000)) {
-                System.err.println("request with seqId="+seqId+" timed out.");
+                System.err.println("store request with seqId="+seqId+" on node="+localNodeId+" timed out.");
             }
         } catch (InterruptedException e) {
             e.printStackTrace();

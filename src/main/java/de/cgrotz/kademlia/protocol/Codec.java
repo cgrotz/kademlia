@@ -22,17 +22,24 @@ public class Codec {
     public Message decode(ByteBuf buffer) throws UnsupportedEncodingException {
         String message = buffer.toString(CharsetUtil.UTF_8);
         String[] parts = message.split("\\|");
-        if(parts[0].equals(MessageType.CONNECT.name())) {
-            return new Connect(Long.parseLong(parts[1]), NodeId.build(parts[2]), parts[3], Integer.parseInt(parts[4]));
+        if(parts[0].equals(MessageType.FIND_NODE.name())) {
+            return new FindNode(Long.parseLong(parts[1]),NodeId.build(parts[2]));
         }
-        else if(parts[0].equals(MessageType.ACKNOWLEDGE.name())) {
-            return new ConnectionAcknowledge(Long.parseLong(parts[1]),
+        else if(parts[0].equals(MessageType.PING.name())) {
+            return new Ping(
+                    Long.parseLong(parts[1]),
                     NodeId.build(parts[2]),
                     parts[3],
-                    Integer.parseInt(parts[4]));
+                    Integer.parseInt(parts[4])
+                    );
         }
-        else if(parts[0].equals(MessageType.FIND_NODE.name())) {
-            return new FindNode(Long.parseLong(parts[1]),NodeId.build(parts[2]));
+        else if(parts[0].equals(MessageType.PONG.name())) {
+            return new Pong(
+                    Long.parseLong(parts[1]),
+                    parts[2],
+                    parts[3],
+                    Integer.parseInt(parts[4])
+            );
         }
         else if(parts[0].equals(MessageType.NODE_REPLY.name())) {
             List<Node> nodes = new ArrayList<>();
@@ -62,16 +69,22 @@ public class Codec {
         }
     }
 
-    public ByteBuf encode(Connect connect) {
-        return Unpooled.copiedBuffer("CONNECT|"+connect.getSeqId()+"|"+connect.getNodeId()+"|"+connect.getHost()+"|"+connect.getPort(), CharsetUtil.UTF_8);
+    public ByteBuf encode(Ping ping) {
+        ByteBuf byteBuf = Unpooled.buffer();
+        byteBuf.writeCharSequence("PING|"+ ping.getSeqId(), CharsetUtil.UTF_8);
+        byteBuf.writeCharSequence("|"+ping.getNodeId().toString(), CharsetUtil.UTF_8);
+        byteBuf.writeCharSequence("|"+ping.getAddress(), CharsetUtil.UTF_8);
+        byteBuf.writeCharSequence("|"+ping.getPort(), CharsetUtil.UTF_8);
+        return byteBuf;
     }
 
-    public ByteBuf encode(ConnectionAcknowledge connectionAcknowledge) {
-        return Unpooled.copiedBuffer("ACKNOWLEDGE|"+ connectionAcknowledge.getSeqId()+
-                "|"+connectionAcknowledge.getNode().getId() +
-                "|"+connectionAcknowledge.getNode().getAddress() +
-                "|"+connectionAcknowledge.getNode().getPort()
-                , CharsetUtil.UTF_8);
+    public ByteBuf encode(Pong pong) {
+        ByteBuf byteBuf = Unpooled.buffer();
+        byteBuf.writeCharSequence("PONG|"+ pong.getSeqId(), CharsetUtil.UTF_8);
+        byteBuf.writeCharSequence("|"+pong.getNodeId().toString(), CharsetUtil.UTF_8);
+        byteBuf.writeCharSequence("|"+pong.getAddress(), CharsetUtil.UTF_8);
+        byteBuf.writeCharSequence("|"+pong.getPort(), CharsetUtil.UTF_8);
+        return byteBuf;
     }
 
     public ByteBuf encode(FindNode findNode) {
@@ -90,7 +103,6 @@ public class Codec {
     }
 
     public ByteBuf encode(Store store) throws UnsupportedEncodingException {
-
         ByteBuf byteBuf = Unpooled.buffer();
         byteBuf.writeCharSequence("STORE|"+ store.getSeqId(), CharsetUtil.UTF_8);
         byteBuf.writeCharSequence("|"+encoder.encodeToString(store.getKey().getBytes(CharsetUtil.UTF_8.name())), CharsetUtil.UTF_8);

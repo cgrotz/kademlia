@@ -1,5 +1,6 @@
 package de.cgrotz.kademlia.protocol;
 
+import de.cgrotz.kademlia.node.NodeId;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
@@ -14,7 +15,14 @@ import lombok.ToString;
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true)
 public class Pong extends Message {
-    public Pong(long seqId) {
+    private final NodeId nodeId;
+    private final String address;
+    private final int port;
+
+    public Pong(long seqId, String nodeId, String address, int port) {
         super(MessageType.PONG, seqId);
+        this.nodeId = NodeId.build(nodeId);
+        this.address = address;
+        this.port = port;
     }
 }

@@ -4,8 +4,6 @@ import de.cgrotz.kademlia.client.KademliaClient;
 import de.cgrotz.kademlia.node.Node;
 import de.cgrotz.kademlia.node.NodeId;
 import de.cgrotz.kademlia.protocol.Codec;
-import de.cgrotz.kademlia.protocol.Connect;
-import de.cgrotz.kademlia.protocol.FindNode;
 import de.cgrotz.kademlia.protocol.ValueReply;
 import de.cgrotz.kademlia.routing.RoutingTable;
 import de.cgrotz.kademlia.server.KademliaServer;
@@ -41,28 +39,29 @@ public class Kademlia {
 
     private final int kValue;
     private final LocalStorage localStorage;
+    private final Node localNode;
 
     public Kademlia(NodeId nodeId, String hostname, int port) {
         this.nodeId = nodeId;
         this.hostname = hostname;
         this.port = port;
         this.kValue = 20;
+        this.localNode = Node.builder().id(nodeId).address(hostname).port(port).build();
 
         this.routingTable = new RoutingTable(kValue, nodeId);
         this.localStorage =  new InMemoryStorage();
 
-        this.client = new KademliaClient(routingTable);
+        this.client = new KademliaClient(nodeId, routingTable, hostname, port);
         this.server = new KademliaServer(port, kValue, routingTable, localStorage,
                 Node.builder().id(nodeId).address(hostname).port(port).build());
     }
 
     public void bootstrap(String hostname, int port) throws InterruptedException {
-        client.send(hostname, port, codec.encode(new Connect(seqId.incrementAndGet(), nodeId, this.hostname, this.port)));
+        client.sendPing(hostname, port, seqId.incrementAndGet());
 
         // FIND_NODE with own IDs to find nearby nodes
-        client.send(hostname, port,
-                codec.encode(new FindNode(seqId.incrementAndGet(), nodeId))
-        );
+        client.sendFindNode(hostname, port,seqId.incrementAndGet(), nodeId, nodes -> {
+        });
 
         // Refresh buckets
         for (int i = 1; i < NodeId.ID_LENGTH; i++) {
@@ -72,13 +71,9 @@ public class Kademlia {
             routingTable.getBucketStream()
                     .flatMap(bucket -> bucket.getNodes().stream())
                     .forEach(node -> {
-                        try {
-                            client.send(node.getAddress(), node.getPort(),
-                                    codec.encode(new FindNode(seqId.incrementAndGet(), current))
-                            );
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
+                        client.sendFindNode(node.getAddress(), node.getPort(),seqId.incrementAndGet(), current, nodes -> {
+
+                        });
                     });
 
         }
@@ -145,5 +140,9 @@ public class Kademlia {
                 alreadyCheckedNodes.add(node);
             }
         }
+    }
+
+    public Node getLocalNode() {
+        return localNode;
     }
 }

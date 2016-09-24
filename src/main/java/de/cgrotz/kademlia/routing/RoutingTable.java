@@ -46,7 +46,12 @@ public class RoutingTable {
     }
 
     public void addNode(NodeId nodeId, String host, int port) {
-        buckets[getBucketId(nodeId)].addNode(nodeId, host,port);
+        if(!nodeId.equals(localNodeId)) {
+            buckets[getBucketId(nodeId)].addNode(nodeId, host, port);
+        }
+        else {
+            System.out.println("Routing table of node="+nodeId+" can't contain itself. (localNodeId="+localNodeId+")");
+        }
     }
 
     public Bucket[] getBuckets() {

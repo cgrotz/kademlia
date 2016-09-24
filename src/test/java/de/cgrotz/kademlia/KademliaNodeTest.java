@@ -16,24 +16,31 @@ public class KademliaNodeTest {
     @Test
     public void simpleTest() throws InterruptedException, ExecutionException {
         Kademlia kad1 = new Kademlia(
-                NodeId.random(),
+                NodeId.build("-292490753721043471326861150471687022870500507356"),
                 "127.0.0.1", 9001
         );
 
         Kademlia kad2 = new Kademlia(
-                NodeId.random(),
+                NodeId.build("-352183435137046830118902193008042623829670945730"),
                 "127.0.0.1", 9002
         );
 
         Kademlia kad3 = new Kademlia(
-                NodeId.random(),
+                NodeId.build("590079237527231438500678240732481547146451535223"),
                 "127.0.0.1", 9003
         );
 
         kad2.bootstrap("127.0.0.1", 9001);
         kad3.bootstrap("127.0.0.1", 9001);
 
-        Thread.sleep(1000);
+        Thread.sleep(10000);
+
+        assertThat(kad1.getRoutingTable().getBuckets()[155].getNodes(), contains(kad2.getLocalNode()));
+        assertThat(kad1.getRoutingTable().getBuckets()[159].getNodes(), contains(kad3.getLocalNode()));
+
+        assertThat(kad2.getRoutingTable().getBuckets()[155].getNodes(), contains(kad1.getLocalNode()));
+
+        assertThat(kad3.getRoutingTable().getBuckets()[159].getNodes(), containsInAnyOrder(kad1.getLocalNode(), kad2.getLocalNode()));
 
         kad1.put("Key", "Value");
         kad3.put("Key2", "Value2");

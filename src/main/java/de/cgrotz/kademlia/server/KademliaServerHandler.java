@@ -32,11 +32,11 @@ public class KademliaServerHandler extends SimpleChannelInboundHandler<DatagramP
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, DatagramPacket packet) throws Exception {
         Message message = codec.decode(packet.content());
-        if(message.getType() == MessageType.CONNECT) {
-            Connect connect = (Connect)message;
-            routingTable.addNode(NodeId.build(connect.getNodeId()), connect.getHost(), connect.getPort());
-            ctx.writeAndFlush(new DatagramPacket(codec.encode(new ConnectionAcknowledge(message.getSeqId(),
-                    localNode.getId(),localNode.getAddress(), localNode.getPort()
+        if(message.getType() == MessageType.PING) {
+            Ping ping = (Ping)message;
+            routingTable.addNode(ping.getNodeId(), ping.getAddress(), ping.getPort());
+            ctx.writeAndFlush(new DatagramPacket(codec.encode(new Pong(message.getSeqId(),
+                    localNode.getId().toString(),localNode.getAddress(), localNode.getPort()
                     )), packet.sender()));
         }
         else if(message.getType() == MessageType.FIND_NODE) {
@@ -62,6 +62,9 @@ public class KademliaServerHandler extends SimpleChannelInboundHandler<DatagramP
             Store store = (Store) message;
             localStorage.put(store.getKey(), store.getValue());
             ctx.writeAndFlush(new DatagramPacket(codec.encode(new StoreReply(message.getSeqId())), packet.sender()));
+        }
+        else {
+            System.out.println("Unknown message type="+message.getType());
         }
     }
 
