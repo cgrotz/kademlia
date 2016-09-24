@@ -17,6 +17,8 @@ import lombok.Data;
 import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
@@ -100,6 +102,17 @@ public class Kademlia {
                     });
                 });
     }
+
+    public String get(String key) throws ExecutionException, InterruptedException {
+        CompletableFuture<String> future = new CompletableFuture<>();
+        new Thread(() -> {
+            get(key, valueReply -> {
+                future.complete(valueReply.getValue());
+            });
+        }).start();
+        return future.get();
+    }
+
 
     public void get(String key, Consumer<ValueReply> valueReplyConsumer) {
         // using Java's hashCode Algorithm could be a consistency problem
