@@ -1,6 +1,6 @@
 package de.cgrotz.kademlia.protocol;
 
-import de.cgrotz.kademlia.node.NodeId;
+import de.cgrotz.kademlia.node.Key;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
@@ -15,11 +15,11 @@ import lombok.ToString;
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true)
 public class Ping extends Message {
-    private final NodeId nodeId;
+    private final Key nodeId;
     private final String address;
     private final int port;
 
-    public Ping(long seqId, NodeId nodeId, String address, int port) {
+    public Ping(long seqId, Key nodeId, String address, int port) {
         super(MessageType.PING, seqId);
         this.nodeId = nodeId;
         this.address = address;

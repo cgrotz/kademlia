@@ -1,10 +1,11 @@
 package de.cgrotz.kademlia.server;
 
 import de.cgrotz.kademlia.node.Node;
-import de.cgrotz.kademlia.node.NodeId;
+import de.cgrotz.kademlia.node.Key;
 import de.cgrotz.kademlia.protocol.*;
 import de.cgrotz.kademlia.routing.RoutingTable;
 import de.cgrotz.kademlia.storage.LocalStorage;
+import de.cgrotz.kademlia.storage.Value;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.DatagramPacket;
@@ -49,17 +50,17 @@ public class KademliaServerHandler extends SimpleChannelInboundHandler<DatagramP
 
             // query local store
             if(localStorage.contains(findValue.getKey())) {
-                ctx.writeAndFlush(new DatagramPacket(codec.encode(new ValueReply(message.getSeqId(), findValue.getKey(), localStorage.get(findValue.getKey()))), packet.sender()));
+                ctx.writeAndFlush(new DatagramPacket(codec.encode(new ValueReply(message.getSeqId(), findValue.getKey(), localStorage.get(findValue.getKey()).getContent())), packet.sender()));
             }
             else {
                 // Else send list of closest nodes
-                List<Node> closest = routingTable.findClosest(new NodeId(findValue.getKey().hashCode()), kValue);
+                List<Node> closest = routingTable.findClosest(new Key(findValue.getKey().hashCode()), kValue);
                 ctx.writeAndFlush(new DatagramPacket(codec.encode(new NodeReply(message.getSeqId(), closest)), packet.sender()));
             }
         }
         else if(message.getType() == MessageType.STORE) {
             Store store = (Store) message;
-            localStorage.put(store.getKey(), store.getValue());
+            localStorage.put(store.getKey(), Value.builder().content(store.getValue()).lastPublished(System.currentTimeMillis()).build());
             ctx.writeAndFlush(new DatagramPacket(codec.encode(new StoreReply(message.getSeqId())), packet.sender()));
         }
         else {

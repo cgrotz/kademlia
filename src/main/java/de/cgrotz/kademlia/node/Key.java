@@ -1,6 +1,5 @@
 package de.cgrotz.kademlia.node;
 
-import lombok.Builder;
 import lombok.Data;
 
 import java.math.BigInteger;
@@ -11,61 +10,61 @@ import java.util.BitSet;
  * Created by Christoph on 21.09.2016.
  */
 @Data
-public class NodeId {
+public class Key {
     public final static int ID_LENGTH = 160;
 
     private BigInteger key;
 
 
-    public NodeId(byte[] result) {
+    public Key(byte[] result) {
         if(result.length > ID_LENGTH/8 ) {
             throw new RuntimeException("ID to long. Needs to be  "+ID_LENGTH+"bits long." );
         }
         this.key = new BigInteger(result);
     }
 
-    public NodeId(BigInteger key) {
+    public Key(BigInteger key) {
         if( key.toByteArray().length > ID_LENGTH/8 ) {
             throw new RuntimeException("ID to long. Needs to be  "+ID_LENGTH+"bits long." );
         }
         this.key = key;
     }
 
-    public NodeId(int id) {
+    public Key(int id) {
         this.key = BigInteger.valueOf(id);
     }
 
-    public static NodeId random() {
+    public static Key random() {
         byte[] bytes = new byte[ID_LENGTH / 8];
         SecureRandom sr1 = new SecureRandom();
         sr1.nextBytes(bytes);
-        return new NodeId(bytes);
+        return new Key(bytes);
     }
 
-    public static NodeId build(String key) {
-        return new NodeId(new BigInteger(key));
+    public static Key build(String key) {
+        return new Key(new BigInteger(key));
     }
 
     /**
-     * Checks the distance between this and another NodeId
+     * Checks the distance between this and another Key
      *
      * @param nid
      *
-     * @return The distance of this NodeId from the given NodeId
+     * @return The distance of this Key from the given Key
      */
-    public NodeId xor(NodeId nid)
+    public Key xor(Key nid)
     {
-        return new NodeId(nid.getKey().xor(this.key));
+        return new Key(nid.getKey().xor(this.key));
     }
 
     /**
-     * Generates a NodeId that is some distance away from this NodeId
+     * Generates a Key that is some distance away from this Key
      *
      * @param distance in number of bits
      *
-     * @return NodeId The newly generated NodeId
+     * @return Key The newly generated Key
      */
-    public NodeId generateNodeIdByDistance(int distance)
+    public Key generateNodeIdByDistance(int distance)
     {
         byte[] result = new byte[ID_LENGTH / 8];
 
@@ -97,11 +96,11 @@ public class NodeId {
             result[i] = Byte.MAX_VALUE;
         }
 
-        return this.xor(new NodeId(result));
+        return this.xor(new Key(result));
     }
 
     /**
-     * Counts the number of leading 0's in this NodeId
+     * Counts the number of leading 0's in this Key
      *
      * @return Integer The number of leading 0's
      */
@@ -150,17 +149,17 @@ public class NodeId {
 
 
     /**
-     * Gets the distance from this NodeId to another NodeId
+     * Gets the distance from this Key to another Key
      *
      * @param to
      *
      * @return Integer The distance
      */
-    public int getDistance(NodeId to)
+    public int getDistance(Key to)
     {
         /**
          * Compute the xor of this and to
-         * Get the index i of the first set bit of the xor returned NodeId
+         * Get the index i of the first set bit of the xor returned Key
          * The distance between them is ID_LENGTH - i
          */
         return ID_LENGTH - this.xor(to).getFirstSetBitIndex();

@@ -11,7 +11,7 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(of={"id"})
 @Builder
 public class Node implements Comparable<Node>{
-    private NodeId id;
+    private Key id;
     private String address;
     private int port;
     private long lastSeen = System.currentTimeMillis();

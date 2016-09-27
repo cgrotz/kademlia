@@ -1,7 +1,6 @@
 package de.cgrotz.kademlia.server;
 
 import de.cgrotz.kademlia.node.Node;
-import de.cgrotz.kademlia.node.NodeId;
 import de.cgrotz.kademlia.routing.RoutingTable;
 import de.cgrotz.kademlia.storage.LocalStorage;
 import io.netty.bootstrap.Bootstrap;

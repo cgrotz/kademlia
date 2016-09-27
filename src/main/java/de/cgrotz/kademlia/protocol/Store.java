@@ -1,5 +1,6 @@
 package de.cgrotz.kademlia.protocol;
 
+import de.cgrotz.kademlia.node.Key;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
@@ -15,9 +16,9 @@ import lombok.ToString;
 @EqualsAndHashCode(callSuper = true)
 public class Store extends Message {
     private final String value;
-    private final String key;
+    private final Key key;
 
-    public Store(long seqId, String key, String value) {
+    public Store(long seqId, Key key, String value) {
         super(MessageType.STORE, seqId);
         this.key = key;
         this.value = value;

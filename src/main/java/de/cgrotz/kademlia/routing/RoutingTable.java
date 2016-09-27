@@ -1,7 +1,8 @@
 package de.cgrotz.kademlia.routing;
 
+import de.cgrotz.kademlia.client.KademliaClient;
+import de.cgrotz.kademlia.node.Key;
 import de.cgrotz.kademlia.node.Node;
-import de.cgrotz.kademlia.node.NodeId;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
 
@@ -17,27 +18,27 @@ import java.util.stream.Stream;
 @EqualsAndHashCode
 public class RoutingTable {
 
-    private final NodeId localNodeId;
+    private final Key localNodeId;
 
     private final Bucket[] buckets;
 
-    public RoutingTable(int k, NodeId localNodeId) {
+    public RoutingTable(int k, Key localNodeId, KademliaClient client) {
         this.localNodeId = localNodeId;
-        buckets = new Bucket[NodeId.ID_LENGTH];
-        for (int i = 0; i < NodeId.ID_LENGTH; i++)
+        buckets = new Bucket[Key.ID_LENGTH];
+        for (int i = 0; i < Key.ID_LENGTH; i++)
         {
-            buckets[i] = new Bucket(k, i);
+            buckets[i] = new Bucket(client, k, i);
         }
     }
 
     /**
      * Compute the bucket ID in which a given node should be placed; the bucketId is computed based on how far the node is away from the Local Node.
      *
-     * @param nid The NodeId for which we want to find which bucket it belong to
+     * @param nid The Key for which we want to find which bucket it belong to
      *
      * @return Integer The bucket ID in which the given node should be placed.
      */
-    public final int getBucketId(NodeId nid)
+    public final int getBucketId(Key nid)
     {
         int bId = this.localNodeId.getDistance(nid) - 1;
 
@@ -45,7 +46,7 @@ public class RoutingTable {
         return bId < 0 ? 0 : bId;
     }
 
-    public void addNode(NodeId nodeId, String host, int port) {
+    public void addNode(Key nodeId, String host, int port) {
         if(!nodeId.equals(localNodeId)) {
             buckets[getBucketId(nodeId)].addNode(nodeId, host, port);
         }
@@ -62,7 +63,7 @@ public class RoutingTable {
         return Arrays.stream(buckets);
     }
 
-    public List<Node> findClosest(NodeId lookupId, int numberOfRequiredNodes) {
+    public List<Node> findClosest(Key lookupId, int numberOfRequiredNodes) {
         return getBucketStream().flatMap(bucket -> bucket.getNodes().stream())
                 .sorted((node1,node2) -> node1.getId().getKey().xor(lookupId.getKey()).abs()
                         .compareTo( node2.getId().getKey().xor(lookupId.getKey()).abs() ))

@@ -1,5 +1,7 @@
 package de.cgrotz.kademlia.storage;
 
+import de.cgrotz.kademlia.node.Key;
+
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -7,20 +9,20 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class InMemoryStorage implements LocalStorage {
 
-    private final ConcurrentHashMap<String, String> map = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Key, Value> map = new ConcurrentHashMap<>();
 
     @Override
-    public void put(String key, String value) {
+    public void put(Key key, Value value) {
         map.put(key, value);
     }
 
     @Override
-    public String get(String key) {
+    public Value get(Key key) {
         return map.get(key);
     }
 
     @Override
-    public boolean contains(String key) {
+    public boolean contains(Key key) {
         return map.containsKey(key);
     }
 }

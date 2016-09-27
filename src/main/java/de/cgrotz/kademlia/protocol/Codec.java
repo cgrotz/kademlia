@@ -1,7 +1,7 @@
 package de.cgrotz.kademlia.protocol;
 
+import de.cgrotz.kademlia.node.Key;
 import de.cgrotz.kademlia.node.Node;
-import de.cgrotz.kademlia.node.NodeId;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.CharsetUtil;
@@ -23,12 +23,12 @@ public class Codec {
         String message = buffer.toString(CharsetUtil.UTF_8);
         String[] parts = message.split("\\|");
         if(parts[0].equals(MessageType.FIND_NODE.name())) {
-            return new FindNode(Long.parseLong(parts[1]),NodeId.build(parts[2]));
+            return new FindNode(Long.parseLong(parts[1]), Key.build(parts[2]));
         }
         else if(parts[0].equals(MessageType.PING.name())) {
             return new Ping(
                     Long.parseLong(parts[1]),
-                    NodeId.build(parts[2]),
+                    Key.build(parts[2]),
                     parts[3],
                     Integer.parseInt(parts[4])
                     );
@@ -45,24 +45,24 @@ public class Codec {
             List<Node> nodes = new ArrayList<>();
             for(int i = 2; i< parts.length; i++) {
                 String[] address = parts[i].split(":");
-                nodes.add(Node.builder().id(NodeId.build(address[0])).address(address[1]).port(Integer.parseInt(address[2])).lastSeen(System.currentTimeMillis()).build());
+                nodes.add(Node.builder().id(Key.build(address[0])).address(address[1]).port(Integer.parseInt(address[2])).lastSeen(System.currentTimeMillis()).build());
             }
             return new NodeReply(Long.parseLong(parts[1]), nodes);
         }
         else if(parts[0].equals(MessageType.STORE.name())) {
             return new Store(Long.parseLong(parts[1]),
-                    new String(decoder.decode(parts[2]), CharsetUtil.UTF_8.name()),
+                    Key.build(parts[2]),
                     new String(decoder.decode(parts[3]), CharsetUtil.UTF_8.name()));
         }
         else if(parts[0].equals(MessageType.STORE_REPLY.name())) {
             return new StoreReply(Long.parseLong(parts[1]));
         }
         else if(parts[0].equals(MessageType.FIND_VALUE.name())) {
-            return new FindValue(Long.parseLong(parts[1]), parts[2]);
+            return new FindValue(Long.parseLong(parts[1]), Key.build(parts[2]));
         }
         else if(parts[0].equals(MessageType.VALUE_REPLY.name())) {
             return new ValueReply(Long.parseLong(parts[1]),
-                    parts[2], parts[3]);
+                    Key.build(parts[2]), parts[3]);
         }
         else {
             System.out.println("Can't decode message_type="+parts[0]);
@@ -106,7 +106,7 @@ public class Codec {
     public ByteBuf encode(Store msg) throws UnsupportedEncodingException {
         ByteBuf byteBuf = Unpooled.buffer();
         byteBuf.writeCharSequence(msg.getType().name()+"|"+ msg.getSeqId(), CharsetUtil.UTF_8);
-        byteBuf.writeCharSequence("|"+encoder.encodeToString(msg.getKey().getBytes(CharsetUtil.UTF_8.name())), CharsetUtil.UTF_8);
+        byteBuf.writeCharSequence("|"+msg.getKey(), CharsetUtil.UTF_8);
         byteBuf.writeCharSequence("|"+encoder.encodeToString(msg.getValue().getBytes(CharsetUtil.UTF_8.name())), CharsetUtil.UTF_8);
         return byteBuf;
     }
