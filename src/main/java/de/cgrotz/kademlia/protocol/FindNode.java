@@ -1,6 +1,7 @@
 package de.cgrotz.kademlia.protocol;
 
 import de.cgrotz.kademlia.node.Key;
+import de.cgrotz.kademlia.node.Node;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
@@ -18,8 +19,8 @@ public class FindNode extends Message {
 
     private final Key lookupId;
 
-    public FindNode(long seqId, Key lookupId) {
-        super(MessageType.FIND_NODE, seqId);
+    public FindNode(long seqId, Node origin, Key lookupId) {
+        super(MessageType.FIND_NODE, seqId, origin);
         this.lookupId = lookupId;
     }
 }

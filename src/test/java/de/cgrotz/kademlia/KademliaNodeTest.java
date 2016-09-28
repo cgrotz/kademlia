@@ -55,5 +55,48 @@ public class KademliaNodeTest {
         assertThat(kad1.get(key2), equalTo("Value2"));
         assertThat(kad2.get(key2), equalTo("Value2"));
         assertThat(kad3.get(key2), equalTo("Value2"));
+
+        kad1.close();
+        kad2.close();
+        kad3.close();
+    }
+
+    @Test
+    public void complexRoutingTest() throws InterruptedException, ExecutionException {
+        Kademlia kad1 = new Kademlia(
+                Key.build("-352183435137046830118902193008042623829670945730"),
+                "127.0.0.1", 9001
+        );
+
+        Kademlia kad2 = new Kademlia(
+                Key.build("-292490753721043471326861150471687022870500507356"),
+                "127.0.0.1", 9002
+        );
+
+        Kademlia kad3 = new Kademlia(
+                Key.build("590079237527231438500678240732481547146451535223"),
+                "127.0.0.1", 9003
+        );
+
+        Kademlia kad4 = new Kademlia(
+                Key.build("-528381461527837381681463930629914464494078737316"),
+                "127.0.0.1", 9004
+        );
+
+        kad2.bootstrap("127.0.0.1", 9001);
+        kad3.bootstrap("127.0.0.1", 9002);
+        kad4.bootstrap("127.0.0.1", 9003);
+
+        Thread.sleep(10000);
+
+        Key key1 = Key.random();
+        kad4.put(key1, "Value");
+
+        assertThat(kad1.get(key1), equalTo("Value"));
+
+        kad1.close();
+        kad2.close();
+        kad3.close();
+        kad4.close();
     }
 }

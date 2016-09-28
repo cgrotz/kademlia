@@ -9,6 +9,8 @@ import de.cgrotz.kademlia.storage.Value;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.DatagramPacket;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
@@ -16,6 +18,8 @@ import java.util.List;
  * Created by Christoph on 21.09.2016.
  */
 public class KademliaServerHandler extends SimpleChannelInboundHandler<DatagramPacket> {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(KademliaServerHandler.class);
 
     private final RoutingTable routingTable;
     private final int kValue;
@@ -33,35 +37,36 @@ public class KademliaServerHandler extends SimpleChannelInboundHandler<DatagramP
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, DatagramPacket packet) throws Exception {
         Message message = codec.decode(packet.content());
+        routingTable.addNode(message.getOrigin());
+
+        LOGGER.info("Received message type={},seqId={} from node={}", message.getType(),message.getSeqId(), message.getOrigin());
         if(message.getType() == MessageType.PING) {
             Ping ping = (Ping)message;
-            routingTable.addNode(ping.getNodeId(), ping.getAddress(), ping.getPort());
-            ctx.writeAndFlush(new DatagramPacket(codec.encode(new Pong(message.getSeqId(),
-                    localNode.getId().toString(),localNode.getAddress(), localNode.getPort()
-                    )), packet.sender()));
+            routingTable.addNode(ping.getOrigin().getId(), ping.getOrigin().getAddress(), ping.getOrigin().getPort());
+            ctx.writeAndFlush(new DatagramPacket(codec.encode(new Pong(message.getSeqId(),localNode)), packet.sender()));
         }
         else if(message.getType() == MessageType.FIND_NODE) {
             FindNode findNode = (FindNode) message;
             List<Node> closest = routingTable.findClosest(findNode.getLookupId(), kValue);
-            ctx.writeAndFlush(new DatagramPacket(codec.encode(new NodeReply(message.getSeqId(), closest)), packet.sender()));
+            ctx.writeAndFlush(new DatagramPacket(codec.encode(new NodeReply(message.getSeqId(),localNode, closest)), packet.sender()));
         }
         else if(message.getType() == MessageType.FIND_VALUE) {
             FindValue findValue = (FindValue) message;
 
             // query local store
             if(localStorage.contains(findValue.getKey())) {
-                ctx.writeAndFlush(new DatagramPacket(codec.encode(new ValueReply(message.getSeqId(), findValue.getKey(), localStorage.get(findValue.getKey()).getContent())), packet.sender()));
+                ctx.writeAndFlush(new DatagramPacket(codec.encode(new ValueReply(message.getSeqId(),localNode, findValue.getKey(), localStorage.get(findValue.getKey()).getContent())), packet.sender()));
             }
             else {
                 // Else send list of closest nodes
                 List<Node> closest = routingTable.findClosest(new Key(findValue.getKey().hashCode()), kValue);
-                ctx.writeAndFlush(new DatagramPacket(codec.encode(new NodeReply(message.getSeqId(), closest)), packet.sender()));
+                ctx.writeAndFlush(new DatagramPacket(codec.encode(new NodeReply(message.getSeqId(),localNode, closest)), packet.sender()));
             }
         }
         else if(message.getType() == MessageType.STORE) {
             Store store = (Store) message;
             localStorage.put(store.getKey(), Value.builder().content(store.getValue()).lastPublished(System.currentTimeMillis()).build());
-            ctx.writeAndFlush(new DatagramPacket(codec.encode(new StoreReply(message.getSeqId())), packet.sender()));
+            ctx.writeAndFlush(new DatagramPacket(codec.encode(new StoreReply(message.getSeqId(),localNode)), packet.sender()));
         }
         else {
             System.out.println("Unknown message type="+message.getType());

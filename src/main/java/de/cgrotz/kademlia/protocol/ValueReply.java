@@ -1,6 +1,7 @@
 package de.cgrotz.kademlia.protocol;
 
 import de.cgrotz.kademlia.node.Key;
+import de.cgrotz.kademlia.node.Node;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
@@ -18,8 +19,8 @@ public class ValueReply extends Message {
     private final String value;
     private final Key key;
 
-    public ValueReply(long seqId, Key key, String value) {
-        super(MessageType.VALUE_REPLY, seqId);
+    public ValueReply(long seqId, Node origin, Key key, String value) {
+        super(MessageType.VALUE_REPLY, seqId, origin);
         this.key = key;
         this.value = value;
     }

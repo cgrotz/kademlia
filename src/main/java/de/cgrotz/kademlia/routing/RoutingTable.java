@@ -73,4 +73,8 @@ public class RoutingTable {
     public void retireNode(Node node) {
         buckets[getBucketId(node.getId())].retireNode(node);
     }
+
+    public void addNode(Node node) {
+        addNode(node.getId(), node.getAddress(), node.getPort());
+    }
 }

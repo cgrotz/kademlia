@@ -10,6 +10,8 @@ import de.cgrotz.kademlia.server.KademliaServer;
 import de.cgrotz.kademlia.storage.InMemoryStorage;
 import de.cgrotz.kademlia.storage.LocalStorage;
 import io.netty.util.internal.ConcurrentSet;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -24,6 +26,8 @@ import java.util.stream.Collectors;
  * Created by Christoph on 21.09.2016.
  */
 public class Kademlia {
+    private static final Logger LOGGER = LoggerFactory.getLogger(Kademlia.class);
+
     protected final RoutingTable routingTable;
     protected final KademliaClient client;
     protected final KademliaServer server;
@@ -39,7 +43,7 @@ public class Kademlia {
         this.config = Configuration.buildDefault();
         this.localNode = Node.builder().id(nodeId).address(hostname).port(port).build();
 
-        this.client = new KademliaClient(config, nodeId, hostname, port);
+        this.client = new KademliaClient(config, localNode);
 
         this.routingTable = new RoutingTable(config.getKValue(), nodeId, client);
         this.localStorage =  new InMemoryStorage();
@@ -48,15 +52,19 @@ public class Kademlia {
     }
 
     public void bootstrap(String hostname, int port) throws InterruptedException {
+        LOGGER.info("bootstrapping node={}", localNode);
         client.sendPing(hostname, port, pong -> {
-            routingTable.addNode(pong.getNodeId(), pong.getAddress(), pong.getPort());
+            LOGGER.info("bootstrapping node={}, ping from remote={}:{} received", localNode, hostname, port);
+            routingTable.addNode(pong.getOrigin().getId(), pong.getOrigin().getAddress(), pong.getOrigin().getPort());
         });
 
         // FIND_NODE with own IDs to find nearby nodes
         client.sendFindNode(hostname, port, localNode.getId(), nodes -> {
+            LOGGER.info("bootstrapping node={}, sendFind node from remote={}:{} received, nodes={}", localNode, hostname, port, nodes.size());
             nodes.stream().forEach(node -> routingTable.addNode(node.getId(), node.getAddress(), node.getPort()));
         });
 
+        LOGGER.info("bootstrapping node={}, refreshing buckets", localNode);
         // Refresh buckets
         for (int i = 1; i < Key.ID_LENGTH; i++) {
             // Construct a Key that is i bits away from the current node Id
@@ -80,12 +88,11 @@ public class Kademlia {
      * @param value
      */
     public void put(Key key, String value) throws InterruptedException {
-        int id = key.hashCode();
-        client.sendFindNode(localNode.getAddress(), localNode.getPort(), new Key(id), nodes -> {
-                    nodes.stream().forEach(node -> {
-                        client.sendContentToNode( node, key ,value);
-                    });
-                });
+        client.sendFindNode(localNode.getAddress(), localNode.getPort(), key, nodes -> {
+            nodes.stream().forEach(node -> {
+                client.sendContentToNode( node, key ,value);
+            });
+        });
     }
 
     /**
@@ -114,7 +121,7 @@ public class Kademlia {
 
     public void get(Key key, Consumer<ValueReply> valueReplyConsumer) {
         if(localStorage.contains(key)) {
-            valueReplyConsumer.accept(new ValueReply(-1,key, localStorage.get(key).getContent()));
+            valueReplyConsumer.accept(new ValueReply(-1,localNode, key, localStorage.get(key).getContent()));
         }
         else {
             ConcurrentSet<Node> alreadyCheckedNodes = new ConcurrentSet<>();
@@ -158,5 +165,10 @@ public class Kademlia {
                 .routingTable(routingTable)
                 .k(config.getKValue())
                 .build().execute();
+    }
+
+    public void close() {
+        server.close();
+        client.close();
     }
 }

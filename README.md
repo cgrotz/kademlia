@@ -29,8 +29,9 @@ kad.get("key");
 
 # Open Points
 [ ] Extend Testing
-[ ] Bucket Refreshing
-[ ] Key Republishing
+[x] Bucket Refreshing
+[x] Key Republishing
+[ ] Client retry behavior
 [ ] Caching
 [ ] Store value as continuous log of events?
 [ ] Provide TLS encryption with Key Exchange for inter node communication

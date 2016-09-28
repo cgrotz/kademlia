@@ -22,47 +22,40 @@ public class Codec {
     public Message decode(ByteBuf buffer) throws UnsupportedEncodingException {
         String message = buffer.toString(CharsetUtil.UTF_8);
         String[] parts = message.split("\\|");
+        long seqId = Long.parseLong(parts[1]);
+        Node origin = decodeOrigin(parts);
+
         if(parts[0].equals(MessageType.FIND_NODE.name())) {
-            return new FindNode(Long.parseLong(parts[1]), Key.build(parts[2]));
+            return new FindNode(seqId, origin, Key.build(parts[2]));
         }
         else if(parts[0].equals(MessageType.PING.name())) {
-            return new Ping(
-                    Long.parseLong(parts[1]),
-                    Key.build(parts[2]),
-                    parts[3],
-                    Integer.parseInt(parts[4])
-                    );
+            return new Ping( seqId, origin );
         }
         else if(parts[0].equals(MessageType.PONG.name())) {
-            return new Pong(
-                    Long.parseLong(parts[1]),
-                    parts[2],
-                    parts[3],
-                    Integer.parseInt(parts[4])
-            );
+            return new Pong( seqId, origin );
         }
         else if(parts[0].equals(MessageType.NODE_REPLY.name())) {
             List<Node> nodes = new ArrayList<>();
-            for(int i = 2; i< parts.length; i++) {
+            for(int i = 5; i< parts.length; i++) {
                 String[] address = parts[i].split(":");
                 nodes.add(Node.builder().id(Key.build(address[0])).address(address[1]).port(Integer.parseInt(address[2])).lastSeen(System.currentTimeMillis()).build());
             }
-            return new NodeReply(Long.parseLong(parts[1]), nodes);
+            return new NodeReply(seqId, origin, nodes);
         }
         else if(parts[0].equals(MessageType.STORE.name())) {
-            return new Store(Long.parseLong(parts[1]),
-                    Key.build(parts[2]),
-                    new String(decoder.decode(parts[3]), CharsetUtil.UTF_8.name()));
+            return new Store(seqId, origin,
+                    Key.build(parts[5]),
+                    new String(decoder.decode(parts[6]), CharsetUtil.UTF_8.name()));
         }
         else if(parts[0].equals(MessageType.STORE_REPLY.name())) {
-            return new StoreReply(Long.parseLong(parts[1]));
+            return new StoreReply(seqId, origin);
         }
         else if(parts[0].equals(MessageType.FIND_VALUE.name())) {
-            return new FindValue(Long.parseLong(parts[1]), Key.build(parts[2]));
+            return new FindValue(seqId, origin, Key.build(parts[2]));
         }
         else if(parts[0].equals(MessageType.VALUE_REPLY.name())) {
-            return new ValueReply(Long.parseLong(parts[1]),
-                    Key.build(parts[2]), parts[3]);
+            return new ValueReply(seqId, origin,
+                    Key.build(parts[5]), parts[6]);
         }
         else {
             System.out.println("Can't decode message_type="+parts[0]);
@@ -70,33 +63,32 @@ public class Codec {
         }
     }
 
+    private Node decodeOrigin(String[] parts) {
+        return Node.builder().id(Key.build(parts[2])).address(parts[3]).port(Integer.parseInt(parts[4])).lastSeen(System.currentTimeMillis()).build();
+    }
+
     public ByteBuf encode(Ping msg) {
         ByteBuf byteBuf = Unpooled.buffer();
-        byteBuf.writeCharSequence(msg.getType().name()+"|"+ msg.getSeqId(), CharsetUtil.UTF_8);
-        byteBuf.writeCharSequence("|"+msg.getNodeId().toString(), CharsetUtil.UTF_8);
-        byteBuf.writeCharSequence("|"+msg.getAddress(), CharsetUtil.UTF_8);
-        byteBuf.writeCharSequence("|"+msg.getPort(), CharsetUtil.UTF_8);
+        encodeHeader(byteBuf, msg);
         return byteBuf;
     }
 
     public ByteBuf encode(Pong msg) {
         ByteBuf byteBuf = Unpooled.buffer();
-        byteBuf.writeCharSequence(msg.getType().name()+"|"+ msg.getSeqId(), CharsetUtil.UTF_8);
-        byteBuf.writeCharSequence("|"+msg.getNodeId().toString(), CharsetUtil.UTF_8);
-        byteBuf.writeCharSequence("|"+msg.getAddress(), CharsetUtil.UTF_8);
-        byteBuf.writeCharSequence("|"+msg.getPort(), CharsetUtil.UTF_8);
+        encodeHeader(byteBuf, msg);
         return byteBuf;
     }
 
     public ByteBuf encode(FindNode msg) {
         ByteBuf byteBuf = Unpooled.buffer();
-        byteBuf.writeCharSequence(msg.getType().name()+"|"+ msg.getSeqId()+"|"+msg.getLookupId().toString(), CharsetUtil.UTF_8);
+        encodeHeader(byteBuf, msg);
+        byteBuf.writeCharSequence("|"+msg.getLookupId().toString(), CharsetUtil.UTF_8);
         return byteBuf;
     }
 
     public ByteBuf encode(NodeReply msg) {
         ByteBuf byteBuf = Unpooled.buffer();
-        byteBuf.writeCharSequence(msg.getType().name()+"|"+ msg.getSeqId(), CharsetUtil.UTF_8);
+        encodeHeader(byteBuf, msg);
         for( Node node : msg.getNodes()) {
             byteBuf.writeCharSequence( "|"+ node.getId().toString()+":"+node.getAddress()+":"+node.getPort(), CharsetUtil.UTF_8);
         }
@@ -105,7 +97,7 @@ public class Codec {
 
     public ByteBuf encode(Store msg) throws UnsupportedEncodingException {
         ByteBuf byteBuf = Unpooled.buffer();
-        byteBuf.writeCharSequence(msg.getType().name()+"|"+ msg.getSeqId(), CharsetUtil.UTF_8);
+        encodeHeader(byteBuf, msg);
         byteBuf.writeCharSequence("|"+msg.getKey(), CharsetUtil.UTF_8);
         byteBuf.writeCharSequence("|"+encoder.encodeToString(msg.getValue().getBytes(CharsetUtil.UTF_8.name())), CharsetUtil.UTF_8);
         return byteBuf;
@@ -113,23 +105,28 @@ public class Codec {
 
     public ByteBuf encode(StoreReply msg) {
         ByteBuf byteBuf = Unpooled.buffer();
-        byteBuf.writeCharSequence(msg.getType().name()+"|"+ msg.getSeqId(), CharsetUtil.UTF_8);
+        encodeHeader(byteBuf, msg);
         return byteBuf;
     }
 
     public ByteBuf encode(FindValue msg) {
         ByteBuf byteBuf = Unpooled.buffer();
-        byteBuf.writeCharSequence(msg.getType().name()+"|"+ msg.getSeqId(), CharsetUtil.UTF_8);
+        encodeHeader(byteBuf, msg);
         byteBuf.writeCharSequence("|"+ msg.getKey(), CharsetUtil.UTF_8);
         return byteBuf;
     }
 
     public ByteBuf encode(ValueReply msg) {
         ByteBuf byteBuf = Unpooled.buffer();
-        byteBuf.writeCharSequence(msg.getType().name()+"|"+ msg.getSeqId(), CharsetUtil.UTF_8);
+        encodeHeader(byteBuf, msg);
         byteBuf.writeCharSequence("|"+ msg.getKey(), CharsetUtil.UTF_8);
         byteBuf.writeCharSequence("|"+ msg.getValue(), CharsetUtil.UTF_8);
         return byteBuf;
+    }
+
+    private void encodeHeader(ByteBuf byteBuf, Message msg) {
+        byteBuf.writeCharSequence(msg.getType().name()+"|"+ msg.getSeqId(), CharsetUtil.UTF_8);
+        byteBuf.writeCharSequence("|"+msg.getOrigin().getId()+"|"+ msg.getOrigin().getAddress()+"|"+ msg.getOrigin().getPort(), CharsetUtil.UTF_8);
     }
 
     public ByteBuf encode(Message msg) throws UnsupportedEncodingException {

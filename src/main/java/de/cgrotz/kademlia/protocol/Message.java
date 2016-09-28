@@ -1,5 +1,6 @@
 package de.cgrotz.kademlia.protocol;
 
+import de.cgrotz.kademlia.node.Node;
 import lombok.Data;
 
 /**
@@ -9,4 +10,6 @@ import lombok.Data;
 public abstract class Message {
     private final MessageType type;
     private final long seqId;
+
+    private final Node origin;
 }

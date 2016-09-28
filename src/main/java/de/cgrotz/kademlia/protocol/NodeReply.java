@@ -17,8 +17,8 @@ public class NodeReply extends Message {
 
     private final List<Node> nodes;
 
-    public NodeReply(long seqId, List<Node> nodes) {
-        super(MessageType.NODE_REPLY, seqId);
+    public NodeReply(long seqId, Node origin, List<Node> nodes) {
+        super(MessageType.NODE_REPLY, seqId, origin);
         this.nodes = nodes;
     }
 }

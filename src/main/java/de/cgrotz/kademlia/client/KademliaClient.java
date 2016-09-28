@@ -12,6 +12,8 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.nio.NioDatagramChannel;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
@@ -24,21 +26,22 @@ import java.util.function.Consumer;
  */
 public class KademliaClient {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(KademliaClient.class);
+
+    private static SecureRandom random = new SecureRandom();
+
     private final Distributor distributor;
     private final Bootstrap bootstrap;
     private final Configuration config;
-    private Codec codec = new Codec();
-    private final Key localNodeId;
-    private final String localHostName;
-    private final int localPort;
-    private static SecureRandom random = new SecureRandom();
+    private final Node localNode;
+    private final NioEventLoopGroup group;
 
-    public KademliaClient(Configuration config, Key localNodeId, String localHostName, int localPort) throws InterruptedException {
-        this.localNodeId = localNodeId;
-        this.localHostName = localHostName;
-        this.localPort = localPort;
+    private Codec codec = new Codec();
+
+    public KademliaClient(Configuration config, Node localNode) throws InterruptedException {
+        this.localNode = localNode;
         this.config = config;
-        EventLoopGroup group = new NioEventLoopGroup();
+        this.group = new NioEventLoopGroup();
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             group.shutdownGracefully();
@@ -61,7 +64,7 @@ public class KademliaClient {
                     new InetSocketAddress(hostname, port))).sync();
 
             if (!channel.closeFuture().await(config.getNetworkTimeoutMs())) {
-                System.err.println("request with seqId="+seqId+" on node="+localNodeId+" timed out.");
+                LOGGER.error("request with seqId={} on node={} timed out.", seqId, localNode);
             }
         } catch (InterruptedException e) {
             throw new TimeoutException();
@@ -72,7 +75,7 @@ public class KademliaClient {
 
     public void sendPing(String hostname, int port, Consumer<Pong> pongConsumer) throws TimeoutException {
         long seqId = random.nextLong();
-        send(hostname, port, seqId,new Ping(seqId, this.localNodeId, this.localHostName, this.localPort), msg -> {
+        send(hostname, port, seqId,new Ping(seqId,localNode), msg -> {
             pongConsumer.accept((Pong)msg);
         });
     }
@@ -80,7 +83,7 @@ public class KademliaClient {
 
     public void sendFindNode(String hostname, int port, Key key, Consumer<List<Node>> callback) throws TimeoutException {
         long seqId = random.nextLong();
-        send(hostname, port, seqId,new FindNode(seqId, key),
+        send(hostname, port, seqId,new FindNode(seqId,localNode, key),
                 message -> {
                     NodeReply nodeReply = (NodeReply) message;
                     callback.accept(nodeReply.getNodes());
@@ -91,7 +94,7 @@ public class KademliaClient {
     public void sendFindValue(String hostname, int port, Key key,
                               Consumer<NodeReply> nodeReplyConsumer, Consumer<ValueReply> valueReplyConsumer) throws TimeoutException {
         long seqId = random.nextLong();
-        send(hostname, port, seqId, new FindValue(seqId, key),
+        send(hostname, port, seqId, new FindValue(seqId,localNode, key),
                 message -> {
                     if (message.getType() == MessageType.NODE_REPLY) {
                         NodeReply nodeReply = (NodeReply) message;
@@ -107,10 +110,14 @@ public class KademliaClient {
 
     public void sendContentToNode(Node node, Key key, String value) throws TimeoutException {
         final long seqId = random.nextLong();
-        send(node.getAddress(), node.getPort(), seqId, new Store(seqId, key, value),
+        send(node.getAddress(), node.getPort(), seqId, new Store(seqId,localNode, key, value),
                 message -> {
 
                 }
         );
+    }
+
+    public void close() {
+        group.shutdownGracefully();
     }
 }
