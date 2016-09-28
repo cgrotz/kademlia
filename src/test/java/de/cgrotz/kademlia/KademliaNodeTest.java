@@ -35,12 +35,12 @@ public class KademliaNodeTest {
 
         Thread.sleep(10000);
 
-        assertThat(kad1.getRoutingTable().getBuckets()[155].getNodes(), contains(kad2.getLocalNode()));
-        assertThat(kad1.getRoutingTable().getBuckets()[159].getNodes(), contains(kad3.getLocalNode()));
+        assertThat(kad1.routingTable.getBuckets()[155].getNodes(), contains(kad2.localNode));
+        assertThat(kad1.routingTable.getBuckets()[159].getNodes(), contains(kad3.localNode));
 
-        assertThat(kad2.getRoutingTable().getBuckets()[155].getNodes(), contains(kad1.getLocalNode()));
+        assertThat(kad2.routingTable.getBuckets()[155].getNodes(), contains(kad1.localNode));
 
-        assertThat(kad3.getRoutingTable().getBuckets()[159].getNodes(), containsInAnyOrder(kad1.getLocalNode(), kad2.getLocalNode()));
+        assertThat(kad3.routingTable.getBuckets()[159].getNodes(), containsInAnyOrder(kad1.localNode, kad2.localNode));
 
         Key key1 = Key.random();
         Key key2 = Key.random();

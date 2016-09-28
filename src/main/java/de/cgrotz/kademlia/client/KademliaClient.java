@@ -1,5 +1,6 @@
 package de.cgrotz.kademlia.client;
 
+import de.cgrotz.kademlia.Configuration;
 import de.cgrotz.kademlia.exception.TimeoutException;
 import de.cgrotz.kademlia.node.Key;
 import de.cgrotz.kademlia.node.Node;
@@ -25,16 +26,18 @@ public class KademliaClient {
 
     private final Distributor distributor;
     private final Bootstrap bootstrap;
+    private final Configuration config;
     private Codec codec = new Codec();
     private final Key localNodeId;
     private final String localHostName;
     private final int localPort;
     private static SecureRandom random = new SecureRandom();
 
-    public KademliaClient(Key localNodeId, String localHostName, int localPort) throws InterruptedException {
+    public KademliaClient(Configuration config, Key localNodeId, String localHostName, int localPort) throws InterruptedException {
         this.localNodeId = localNodeId;
         this.localHostName = localHostName;
         this.localPort = localPort;
+        this.config = config;
         EventLoopGroup group = new NioEventLoopGroup();
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -57,7 +60,7 @@ public class KademliaClient {
                     codec.encode(msg),
                     new InetSocketAddress(hostname, port))).sync();
 
-            if (!channel.closeFuture().await(5000)) {
+            if (!channel.closeFuture().await(config.getNetworkTimeoutMs())) {
                 System.err.println("request with seqId="+seqId+" on node="+localNodeId+" timed out.");
             }
         } catch (InterruptedException e) {

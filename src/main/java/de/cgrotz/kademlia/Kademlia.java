@@ -10,12 +10,12 @@ import de.cgrotz.kademlia.server.KademliaServer;
 import de.cgrotz.kademlia.storage.InMemoryStorage;
 import de.cgrotz.kademlia.storage.LocalStorage;
 import io.netty.util.internal.ConcurrentSet;
-import lombok.Data;
 
-import java.math.BigInteger;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -23,33 +23,27 @@ import java.util.stream.Collectors;
 /**
  * Created by Christoph on 21.09.2016.
  */
-@Data
 public class Kademlia {
-    private final RoutingTable routingTable;
-    private final Key nodeId;
-    private final String hostname;
-    private final int port;
-    private final KademliaClient client;
-    private final KademliaServer server;
+    protected final RoutingTable routingTable;
+    protected final KademliaClient client;
+    protected final KademliaServer server;
 
-    private final Codec codec = new Codec();
+    protected final Codec codec = new Codec();
 
-    private final int kValue;
-    private final LocalStorage localStorage;
-    private final Node localNode;
+    protected final LocalStorage localStorage;
+    protected final Node localNode;
+
+    protected final Configuration config;
 
     public Kademlia(Key nodeId, String hostname, int port) throws InterruptedException {
-        this.nodeId = nodeId;
-        this.hostname = hostname;
-        this.port = port;
-        this.kValue = 20;
+        this.config = Configuration.buildDefault();
         this.localNode = Node.builder().id(nodeId).address(hostname).port(port).build();
 
-        this.client = new KademliaClient(nodeId, hostname, port);
+        this.client = new KademliaClient(config, nodeId, hostname, port);
 
-        this.routingTable = new RoutingTable(kValue, nodeId, client);
+        this.routingTable = new RoutingTable(config.getKValue(), nodeId, client);
         this.localStorage =  new InMemoryStorage();
-        this.server = new KademliaServer(port, kValue, routingTable, localStorage,
+        this.server = new KademliaServer(port, config.getKValue(), routingTable, localStorage,
                 Node.builder().id(nodeId).address(hostname).port(port).build());
     }
 
@@ -59,14 +53,14 @@ public class Kademlia {
         });
 
         // FIND_NODE with own IDs to find nearby nodes
-        client.sendFindNode(hostname, port, nodeId, nodes -> {
+        client.sendFindNode(hostname, port, localNode.getId(), nodes -> {
             nodes.stream().forEach(node -> routingTable.addNode(node.getId(), node.getAddress(), node.getPort()));
         });
 
         // Refresh buckets
         for (int i = 1; i < Key.ID_LENGTH; i++) {
             // Construct a Key that is i bits away from the current node Id
-            final Key current = this.nodeId.generateNodeIdByDistance(i);
+            final Key current = this.localNode.getId().generateNodeIdByDistance(i);
 
             routingTable.getBucketStream()
                     .flatMap(bucket -> bucket.getNodes().stream())
@@ -87,21 +81,34 @@ public class Kademlia {
      */
     public void put(Key key, String value) throws InterruptedException {
         int id = key.hashCode();
-        client.sendFindNode(hostname, port, new Key(id), nodes -> {
+        client.sendFindNode(localNode.getAddress(), localNode.getPort(), new Key(id), nodes -> {
                     nodes.stream().forEach(node -> {
                         client.sendContentToNode( node, key ,value);
                     });
                 });
     }
 
-    public String get(Key key) throws ExecutionException, InterruptedException {
+    /**
+     *
+     * Retrieve the Value associated with the Key
+     *
+     * @param key
+     * @return
+     * @throws ExecutionException
+     * @throws InterruptedException
+     */
+    public String get(Key key) {
         CompletableFuture<String> future = new CompletableFuture<>();
         new Thread(() -> {
             get(key, valueReply -> {
                 future.complete(valueReply.getValue());
             });
         }).start();
-        return future.get();
+        try {
+            return future.get(config.getGetTimeoutMs(), TimeUnit.MILLISECONDS);
+        } catch (InterruptedException | TimeoutException | ExecutionException e) {
+            throw new de.cgrotz.kademlia.exception.TimeoutException(e);
+        }
     }
 
 
@@ -138,7 +145,18 @@ public class Kademlia {
         }
     }
 
-    public Node getLocalNode() {
-        return localNode;
+    /**
+     * Execute key republishing
+     *
+     * Iterate over all keys that weren't updated within the last hour and republish
+     * to the other k-nodes that are closest to the associated keys
+     */
+    public void republishKeys() {
+        KeyRepublishing.builder()
+                .kademliaClient(client)
+                .localStorage(localStorage)
+                .routingTable(routingTable)
+                .k(config.getKValue())
+                .build().execute();
     }
 }

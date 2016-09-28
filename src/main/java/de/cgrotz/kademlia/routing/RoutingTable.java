@@ -69,4 +69,8 @@ public class RoutingTable {
                         .compareTo( node2.getId().getKey().xor(lookupId.getKey()).abs() ))
                 .limit(numberOfRequiredNodes).collect(Collectors.toList());
     }
+
+    public void retireNode(Node node) {
+        buckets[getBucketId(node.getId())].retireNode(node);
+    }
 }

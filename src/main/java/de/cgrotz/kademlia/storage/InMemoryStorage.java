@@ -2,7 +2,9 @@ package de.cgrotz.kademlia.storage;
 
 import de.cgrotz.kademlia.node.Key;
 
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * Created by Christoph on 23.09.2016.
@@ -24,5 +26,19 @@ public class InMemoryStorage implements LocalStorage {
     @Override
     public boolean contains(Key key) {
         return map.containsKey(key);
+    }
+
+    @Override
+    public List<Key> getKeysBeforeTimestamp(long timestamp) {
+        return map.entrySet().parallelStream().filter( entry ->
+            entry.getValue().getLastPublished() <= timestamp
+        ).map(entry -> entry.getKey()).collect(Collectors.toList());
+    }
+
+    @Override
+    public void updateLastPublished(Key key, long timestamp) {
+        Value node = map.get(key);
+        node.setLastPublished(timestamp);
+        map.put(key, node);
     }
 }

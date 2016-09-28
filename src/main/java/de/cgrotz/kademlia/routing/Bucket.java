@@ -90,4 +90,23 @@ public class Bucket {
             }
         }
     }
+
+    public void retireNode(Node nodeToRetire) {
+        nodes.remove(nodeToRetire);
+
+        // Fill up with reachable nodes from replacement set
+        while(nodes.size() < k && !replacementNodes.isEmpty()) {
+            Node node = replacementNodes.first();
+            try {
+                client.sendPing(node.getAddress(), node.getPort(), pong -> {
+                    replacementNodes.remove(node);
+                    node.setLastSeen(System.currentTimeMillis());
+                    nodes.add(node);
+                });
+            }
+            catch(TimeoutException exp) {
+                replacementNodes.remove(node);
+            }
+        }
+    }
 }
