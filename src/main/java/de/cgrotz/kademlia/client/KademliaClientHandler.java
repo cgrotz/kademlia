@@ -28,7 +28,7 @@ public class KademliaClientHandler extends SimpleChannelInboundHandler<DatagramP
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, DatagramPacket packet) throws Exception {
         Message message = codec.decode(packet.content());
-        LOGGER.info("receiving response seqId={} msg={} from host={}:{}", message.getSeqId(), message, packet.sender().getHostName(), packet.sender().getPort());
+        LOGGER.debug("receiving response seqId={} msg={} from host={}:{}", message.getSeqId(), message, packet.sender().getHostName(), packet.sender().getPort());
         handlers.get(message.getSeqId()).accept(message);
         handlers.remove(message.getSeqId());
         ctx.close();

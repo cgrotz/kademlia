@@ -62,7 +62,7 @@ public class KademliaClient {
                 .sender(() -> {
                     try {
                         Channel channel = bootstrap.bind(0).sync().channel();
-                        LOGGER.info("requesting seqId={} msg={} on host={}:{}", seqId, msg, hostname, port);
+                        LOGGER.debug("requesting seqId={} msg={} on host={}:{}", seqId, msg, hostname, port);
                         channel.writeAndFlush(new DatagramPacket(
                                 codec.encode(msg),
                                 new InetSocketAddress(hostname, port))).sync();

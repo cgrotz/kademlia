@@ -61,19 +61,19 @@ public class Kademlia {
     }
 
     public void bootstrap(String hostname, int port) {
-        LOGGER.info("bootstrapping node={}", localNode);
+        LOGGER.debug("bootstrapping node={}", localNode);
         client.sendPing(hostname, port, pong -> {
-            LOGGER.info("bootstrapping node={}, ping from remote={}:{} received", localNode, hostname, port);
+            LOGGER.debug("bootstrapping node={}, ping from remote={}:{} received", localNode, hostname, port);
             routingTable.addNode(pong.getOrigin().getId(), pong.getOrigin().getAddress(), pong.getOrigin().getPort());
         });
 
         // FIND_NODE with own IDs to find nearby nodes
         client.sendFindNode(hostname, port, localNode.getId(), nodes -> {
-            LOGGER.info("bootstrapping node={}, sendFind node from remote={}:{} received, nodes={}", localNode, hostname, port, nodes.size());
+            LOGGER.debug("bootstrapping node={}, sendFind node from remote={}:{} received, nodes={}", localNode, hostname, port, nodes.size());
             nodes.stream().forEach(node -> routingTable.addNode(node.getId(), node.getAddress(), node.getPort()));
         });
 
-        LOGGER.info("bootstrapping node={}, refreshing buckets", localNode);
+        LOGGER.debug("bootstrapping node={}, refreshing buckets", localNode);
         refreshBuckets();
     }
 
