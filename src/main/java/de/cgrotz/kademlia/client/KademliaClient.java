@@ -125,6 +125,10 @@ public class KademliaClient {
     }
 
     public void close() {
-        group.shutdownGracefully();
+        try {
+            group.shutdownGracefully().await();
+        } catch (InterruptedException e) {
+
+        }
     }
 }
