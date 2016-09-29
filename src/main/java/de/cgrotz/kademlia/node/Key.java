@@ -43,11 +43,7 @@ public class Key {
     }
 
     public static Key build(String key) {
-        return new Key(new BigInteger(key));
-    }
-
-    public static Key hex(String hexStr) {
-        return new Key(new BigInteger(hexStr, 16));
+        return new Key(new BigInteger(key,16));
     }
 
     /**
