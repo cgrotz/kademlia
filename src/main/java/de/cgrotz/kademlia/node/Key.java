@@ -46,6 +46,10 @@ public class Key {
         return new Key(new BigInteger(key));
     }
 
+    public static Key hex(String hexStr) {
+        return new Key(new BigInteger(hexStr, 16));
+    }
+
     /**
      * Checks the distance between this and another Key
      *
@@ -145,7 +149,7 @@ public class Key {
     @Override
     public String toString()
     {
-        return this.key.toString();
+        return this.key.toString(16);
     }
 
 
