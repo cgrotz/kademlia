@@ -126,11 +126,13 @@ public class Kademlia {
         else {
             ConcurrentSet<Node> alreadyCheckedNodes = new ConcurrentSet<>();
             AtomicBoolean found = new AtomicBoolean(false);
-            get(found, key, routingTable.getBucketStream()
+            List<Node> nodes = routingTable.getBucketStream()
                     .flatMap(bucket -> bucket.getNodes().stream())
                     .sorted((node1, node2) -> node1.getId().getKey().xor(key.getKey()).abs()
                             .compareTo(node2.getId().getKey().xor(key.getKey()).abs()))
-                    .collect(Collectors.toList()), alreadyCheckedNodes, valueReply -> {
+                    .collect(Collectors.toList());
+
+            get(found, key, nodes, alreadyCheckedNodes, valueReply -> {
                         if(!found.getAndSet(true)) {
                             valueReplyConsumer.accept(valueReply);
                         }

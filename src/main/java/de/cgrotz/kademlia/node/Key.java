@@ -1,6 +1,7 @@
 package de.cgrotz.kademlia.node;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.math.BigInteger;
 import java.security.SecureRandom;
@@ -10,11 +11,11 @@ import java.util.BitSet;
  * Created by Christoph on 21.09.2016.
  */
 @Data
+@EqualsAndHashCode(of = "key")
 public class Key {
     public final static int ID_LENGTH = 160;
 
     private BigInteger key;
-
 
     public Key(byte[] result) {
         if(result.length > ID_LENGTH/8 ) {

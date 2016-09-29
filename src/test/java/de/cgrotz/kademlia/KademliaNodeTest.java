@@ -14,6 +14,53 @@ import static org.hamcrest.Matchers.*;
 public class KademliaNodeTest {
 
     @Test
+    public void bootstrapTest() throws InterruptedException, ExecutionException {
+        Kademlia kad1 = new Kademlia(
+                Key.build("-292490753721043471326861150471687022870500507356"),
+                "127.0.0.1", 9001
+        );
+
+        Kademlia kad2 = new Kademlia(
+                Key.build("-352183435137046830118902193008042623829670945730"),
+                "127.0.0.1", 9002
+        );
+        kad2.bootstrap("127.0.0.1", 9001);
+
+        assertThat(kad1.routingTable.getBuckets()[155].getNodes(), contains(kad2.localNode));
+        assertThat(kad2.routingTable.getBuckets()[155].getNodes(), contains(kad1.localNode));
+
+        kad1.close();
+        kad2.close();
+    }
+
+    @Test
+    public void storeAndRetrieveTest() throws InterruptedException, ExecutionException {
+
+        Kademlia kad1 = new Kademlia(
+                Key.build("-292490753721043471326861150471687022870500507356"),
+                "127.0.0.1", 9001
+        );
+
+        Kademlia kad2 = new Kademlia(
+                Key.build("-352183435137046830118902193008042623829670945730"),
+                "127.0.0.1", 9002
+        );
+
+        kad2.bootstrap("127.0.0.1", 9001);
+
+        assertThat(kad1.routingTable.getBuckets()[155].getNodes(), contains(kad2.localNode));
+        assertThat(kad2.routingTable.getBuckets()[155].getNodes(), contains(kad1.localNode));
+
+        Key key1 = Key.build("590079237527231438500678240732481547146451535223");
+
+        kad1.put(key1, "Value");
+        assertThat(kad1.get(key1), equalTo("Value"));
+
+        kad1.close();
+        kad2.close();
+    }
+
+    @Test
     public void simpleTest() throws InterruptedException, ExecutionException {
         Kademlia kad1 = new Kademlia(
                 Key.build("-292490753721043471326861150471687022870500507356"),

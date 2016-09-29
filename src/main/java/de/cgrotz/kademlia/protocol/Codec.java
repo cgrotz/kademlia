@@ -51,7 +51,7 @@ public class Codec {
             return new StoreReply(seqId, origin);
         }
         else if(parts[0].equals(MessageType.FIND_VALUE.name())) {
-            return new FindValue(seqId, origin, Key.build(parts[2]));
+            return new FindValue(seqId, origin, Key.build(parts[5]));
         }
         else if(parts[0].equals(MessageType.VALUE_REPLY.name())) {
             return new ValueReply(seqId, origin,
