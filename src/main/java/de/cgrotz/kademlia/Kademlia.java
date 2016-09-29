@@ -76,20 +76,7 @@ public class Kademlia {
         });
 
         LOGGER.info("bootstrapping node={}, refreshing buckets", localNode);
-        // Refresh buckets
-        for (int i = 1; i < Key.ID_LENGTH; i++) {
-            // Construct a Key that is i bits away from the current node Id
-            final Key current = this.localNode.getId().generateNodeIdByDistance(i);
-
-            routingTable.getBucketStream()
-                    .flatMap(bucket -> bucket.getNodes().stream())
-                    .forEach(node -> {
-                        client.sendFindNode(node.getAddress(), node.getPort(), current, nodes -> {
-                            nodes.stream().forEach(newNode -> routingTable.addNode(newNode.getId(), newNode.getAddress(), newNode.getPort()));
-                        });
-                    });
-
-        }
+        refreshBuckets();
     }
 
     /**
@@ -178,6 +165,23 @@ public class Kademlia {
                 .routingTable(routingTable)
                 .k(config.getKValue())
                 .build().execute();
+    }
+
+    public void refreshBuckets() {
+        // Refresh buckets
+        for (int i = 1; i < Key.ID_LENGTH; i++) {
+            // Construct a Key that is i bits away from the current node Id
+            final Key current = this.localNode.getId().generateNodeIdByDistance(i);
+
+            routingTable.getBucketStream()
+                    .flatMap(bucket -> bucket.getNodes().stream())
+                    .forEach(node -> {
+                        client.sendFindNode(node.getAddress(), node.getPort(), current, nodes -> {
+                            nodes.stream().forEach(newNode -> routingTable.addNode(newNode.getId(), newNode.getAddress(), newNode.getPort()));
+                        });
+                    });
+
+        }
     }
 
     public void close() {
