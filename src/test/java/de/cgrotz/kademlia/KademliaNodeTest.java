@@ -109,6 +109,19 @@ public class KademliaNodeTest {
     }
 
     @Test
+    public void retryTest() throws InterruptedException, ExecutionException {
+        Kademlia kad1 = new Kademlia(
+                Key.build("-292490753721043471326861150471687022870500507356"),
+                "127.0.0.1", 9001
+        );
+
+        kad1.client.sendPing("127.0.0.2", 9002, pong -> {
+
+        });
+        kad1.close();
+    }
+
+    @Test
     public void complexRoutingTest() throws InterruptedException, ExecutionException {
         Kademlia kad1 = new Kademlia(
                 Key.build("-352183435137046830118902193008042623829670945730"),

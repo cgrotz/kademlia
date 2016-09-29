@@ -56,21 +56,28 @@ public class KademliaClient {
 
     private void send(String hostname, int port, long seqId, Message msg, Consumer<Message> consumer) throws TimeoutException {
         kademliaClientHandler.registerHandler(seqId, consumer);
-        try {
-            Channel channel = bootstrap.bind(0).sync().channel();
-            LOGGER.info("requesting seqId={} msg={} on host={}:{}", seqId, msg, hostname, port);
-            channel.writeAndFlush(new DatagramPacket(
-                    codec.encode(msg),
-                    new InetSocketAddress(hostname, port))).sync();
+        Retry.builder()
+                .interval(1000)
+                .retries(3)
+                .sender(() -> {
+                    try {
+                        Channel channel = bootstrap.bind(0).sync().channel();
+                        LOGGER.info("requesting seqId={} msg={} on host={}:{}", seqId, msg, hostname, port);
+                        channel.writeAndFlush(new DatagramPacket(
+                                codec.encode(msg),
+                                new InetSocketAddress(hostname, port))).sync();
 
-            if (!channel.closeFuture().await(config.getNetworkTimeoutMs())) {
-                LOGGER.error("request with seqId={} on node={} timed out.", seqId, localNode);
-            }
-        } catch (InterruptedException e) {
-            throw new TimeoutException();
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-        }
+                        if (!channel.closeFuture().await(config.getNetworkTimeoutMs())) {
+                            LOGGER.warn("request with seqId={} on node={} timed out.", seqId, localNode);
+                            throw new RuntimeException("request with seqId="+seqId+" on node="+localNode+" timed out.");
+                        }
+                    } catch (InterruptedException e) {
+                        throw new TimeoutException();
+                    } catch (UnsupportedEncodingException e) {
+                        LOGGER.error("unsupported encoding for encoding msg", e);
+                        throw new RuntimeException(e);
+                    }
+                }).build().execute();
     }
 
     public void sendPing(String hostname, int port, Consumer<Pong> pongConsumer) throws TimeoutException {
