@@ -17,9 +17,9 @@ import java.util.function.Consumer;
  * Created by Christoph on 24.09.2016.
  */
 @ChannelHandler.Sharable
-public class Distributor extends SimpleChannelInboundHandler<DatagramPacket> {
+public class KademliaClientHandler extends SimpleChannelInboundHandler<DatagramPacket> {
 
-    private final static Logger LOGGER = LoggerFactory.getLogger(Distributor.class);
+    private final static Logger LOGGER = LoggerFactory.getLogger(KademliaClientHandler.class);
 
     private final Codec codec = new Codec();
 

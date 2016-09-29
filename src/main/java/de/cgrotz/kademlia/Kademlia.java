@@ -39,16 +39,27 @@ public class Kademlia {
 
     protected final Configuration config;
 
-    public Kademlia(Key nodeId, String hostname, int port) throws InterruptedException {
-        this.config = Configuration.buildDefault();
-        this.localNode = Node.builder().id(nodeId).address(hostname).port(port).build();
+    public Kademlia(Key nodeId, String hostname, int port) {
+        this(Configuration.defaults()
+                .nodeId(nodeId)
+                .bindingAddress(hostname).bindingPort(port)
+                .advertisingAddress(hostname).advertisingPort(port)
+                .build());
+    }
+
+    public Kademlia(Configuration config){
+        this.config = config;
+        this.localNode = Node.builder().id(config.getNodeId())
+                .address(config.getAdvertisingAddress())
+                .port(config.getAdvertisingPort())
+                .build();
 
         this.client = new KademliaClient(config, localNode);
 
-        this.routingTable = new RoutingTable(config.getKValue(), nodeId, client);
+        this.routingTable = new RoutingTable(config.getKValue(), config.getNodeId(), client);
         this.localStorage =  new InMemoryStorage();
-        this.server = new KademliaServer(port, config.getKValue(), routingTable, localStorage,
-                Node.builder().id(nodeId).address(hostname).port(port).build());
+        this.server = new KademliaServer(config.getBindingAddress(), config.getBindingPort(),
+                config.getKValue(), routingTable, localStorage, localNode);
     }
 
     public void bootstrap(String hostname, int port) throws InterruptedException {

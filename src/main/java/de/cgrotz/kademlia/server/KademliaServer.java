@@ -20,7 +20,7 @@ public class KademliaServer {
     private final int kValue;
     private final LocalStorage localStorage;
 
-    public KademliaServer(int port, int kValue, RoutingTable routingTable, LocalStorage localStorage, Node localNode) {
+    public KademliaServer(String bindingAddress, int port, int kValue, RoutingTable routingTable, LocalStorage localStorage, Node localNode) {
         this.routingTable = routingTable;
         this.localNode = localNode;
         this.kValue = kValue;
@@ -36,7 +36,7 @@ public class KademliaServer {
                         .option(ChannelOption.SO_BROADCAST, false)
                         .handler(new KademliaServerHandler(this.routingTable, this.localStorage, this.localNode, this.kValue));
 
-                b.bind(port).sync().channel().closeFuture().await();
+                b.bind(bindingAddress, port).sync().channel().closeFuture().await();
             } catch (InterruptedException e) {
                 e.printStackTrace();
             } finally {

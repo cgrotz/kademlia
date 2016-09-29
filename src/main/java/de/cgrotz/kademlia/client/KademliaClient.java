@@ -8,7 +8,6 @@ import de.cgrotz.kademlia.protocol.*;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.nio.NioDatagramChannel;
@@ -30,7 +29,7 @@ public class KademliaClient {
 
     private static SecureRandom random = new SecureRandom();
 
-    private final Distributor distributor;
+    private final KademliaClientHandler kademliaClientHandler;
     private final Bootstrap bootstrap;
     private final Configuration config;
     private final Node localNode;
@@ -38,7 +37,7 @@ public class KademliaClient {
 
     private Codec codec = new Codec();
 
-    public KademliaClient(Configuration config, Node localNode) throws InterruptedException {
+    public KademliaClient(Configuration config, Node localNode) {
         this.localNode = localNode;
         this.config = config;
         this.group = new NioEventLoopGroup();
@@ -48,15 +47,15 @@ public class KademliaClient {
         }));
 
         this.bootstrap = new Bootstrap();
-        distributor = new Distributor();
+        kademliaClientHandler = new KademliaClientHandler();
         bootstrap.group(group)
                 .channel(NioDatagramChannel.class)
                 .option(ChannelOption.SO_BROADCAST, false)
-                .handler(distributor);
+                .handler(kademliaClientHandler);
     }
 
     private void send(String hostname, int port, long seqId, Message msg, Consumer<Message> consumer) throws TimeoutException {
-        distributor.registerHandler(seqId, consumer);
+        kademliaClientHandler.registerHandler(seqId, consumer);
         try {
             Channel channel = bootstrap.bind(0).sync().channel();
             LOGGER.info("requesting seqId={} msg={} on host={}:{}", seqId, msg, hostname, port);
