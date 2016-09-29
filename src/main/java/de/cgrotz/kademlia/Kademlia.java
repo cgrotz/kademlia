@@ -60,7 +60,7 @@ public class Kademlia {
                 config.getKValue(), routingTable, localStorage, localNode);
     }
 
-    public void bootstrap(String hostname, int port) throws InterruptedException {
+    public void bootstrap(String hostname, int port) {
         LOGGER.info("bootstrapping node={}", localNode);
         client.sendPing(hostname, port, pong -> {
             LOGGER.info("bootstrapping node={}, ping from remote={}:{} received", localNode, hostname, port);
@@ -83,7 +83,7 @@ public class Kademlia {
      * @param key
      * @param value
      */
-    public void put(Key key, String value) throws InterruptedException {
+    public void put(Key key, String value) {
         client.sendFindNode(localNode.getAddress(), localNode.getPort(), key, nodes -> {
             nodes.stream().forEach(node -> {
                 client.sendContentToNode( node, key ,value);
@@ -97,8 +97,6 @@ public class Kademlia {
      *
      * @param key
      * @return
-     * @throws ExecutionException
-     * @throws InterruptedException
      */
     public String get(Key key) {
         CompletableFuture<String> future = new CompletableFuture<>();

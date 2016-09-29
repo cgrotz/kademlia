@@ -3,8 +3,6 @@ package de.cgrotz.kademlia;
 import de.cgrotz.kademlia.node.Key;
 import org.junit.Test;
 
-import java.util.concurrent.ExecutionException;
-
 import static org.hamcrest.MatcherAssert.*;
 import static org.hamcrest.Matchers.*;
 
@@ -22,7 +20,7 @@ public class KademliaNodeTest {
     };
 
     @Test
-    public void bootstrapTest() throws InterruptedException, ExecutionException {
+    public void bootstrapTest() {
         Kademlia kad1 = new Kademlia(
                 Key.build(KEYS[0]),
                 "127.0.0.1", 9001
@@ -32,18 +30,21 @@ public class KademliaNodeTest {
                 Key.build(KEYS[1]),
                 "127.0.0.1", 9002
         );
-        kad2.bootstrap("127.0.0.1", 9001);
+        
+        try {
+            kad2.bootstrap("127.0.0.1", 9001);
 
-        assertThat(kad1.routingTable.getBuckets()[158].getNodes(), contains(kad2.localNode));
-        assertThat(kad2.routingTable.getBuckets()[158].getNodes(), contains(kad1.localNode));
-
-        kad1.close();
-        kad2.close();
+            assertThat(kad1.routingTable.getBuckets()[158].getNodes(), contains(kad2.localNode));
+            assertThat(kad2.routingTable.getBuckets()[158].getNodes(), contains(kad1.localNode));
+        }
+        finally {
+            kad1.close();
+            kad2.close();
+        }
     }
 
     @Test
-    public void storeAndRetrieveTest() throws InterruptedException, ExecutionException {
-
+    public void storeAndRetrieveTest() {
         Kademlia kad1 = new Kademlia(
                 Key.build(KEYS[0]),
                 "127.0.0.1", 9001
@@ -53,23 +54,26 @@ public class KademliaNodeTest {
                 Key.build(KEYS[1]),
                 "127.0.0.1", 9002
         );
+        
+        try {
+            kad2.bootstrap("127.0.0.1", 9001);
+        
+            assertThat(kad1.routingTable.getBuckets()[158].getNodes(), contains(kad2.localNode));
+            assertThat(kad2.routingTable.getBuckets()[158].getNodes(), contains(kad1.localNode));
+            
+            Key key1 = Key.build(KEYS[3]);
 
-        kad2.bootstrap("127.0.0.1", 9001);
-
-        assertThat(kad1.routingTable.getBuckets()[158].getNodes(), contains(kad2.localNode));
-        assertThat(kad2.routingTable.getBuckets()[158].getNodes(), contains(kad1.localNode));
-
-        Key key1 = Key.build(KEYS[3]);
-
-        kad1.put(key1, "Value");
-        assertThat(kad1.get(key1), equalTo("Value"));
-
-        kad1.close();
-        kad2.close();
+            kad1.put(key1, "Value");
+            assertThat(kad1.get(key1), equalTo("Value"));
+        }
+        finally {
+            kad1.close();
+            kad2.close();
+        }
     }
 
     @Test
-    public void simpleTest() throws InterruptedException, ExecutionException {
+    public void simpleTest() {
         Kademlia kad1 = new Kademlia(
                 Key.build(KEYS[0]),
                 "127.0.0.1", 9001
@@ -84,53 +88,58 @@ public class KademliaNodeTest {
                 Key.build(KEYS[2]),
                 "127.0.0.1", 9003
         );
+        try {
+            kad2.bootstrap("127.0.0.1", 9001);
+            kad3.bootstrap("127.0.0.1", 9001);
 
-        kad2.bootstrap("127.0.0.1", 9001);
-        kad3.bootstrap("127.0.0.1", 9001);
+            assertThat(kad1.routingTable.getBuckets()[158].getNodes(), contains(kad2.localNode));
+            assertThat(kad1.routingTable.getBuckets()[157].getNodes(), contains(kad3.localNode));
 
-        Thread.sleep(10000);
+            assertThat(kad2.routingTable.getBuckets()[158].getNodes(), contains(kad3.localNode, kad1.localNode));
 
-        assertThat(kad1.routingTable.getBuckets()[155].getNodes(), contains(kad2.localNode));
-        assertThat(kad1.routingTable.getBuckets()[159].getNodes(), contains(kad3.localNode));
+            assertThat(kad3.routingTable.getBuckets()[157].getNodes(), containsInAnyOrder(kad1.localNode));
+            assertThat(kad3.routingTable.getBuckets()[158].getNodes(), containsInAnyOrder(kad2.localNode));
 
-        assertThat(kad2.routingTable.getBuckets()[155].getNodes(), contains(kad1.localNode));
+            Key key1 = Key.build(KEYS[3]);
+            Key key2 = Key.build(KEYS[4]);
 
-        assertThat(kad3.routingTable.getBuckets()[159].getNodes(), containsInAnyOrder(kad1.localNode, kad2.localNode));
+            kad1.put(key1, "Value");
+            kad3.put(key2, "Value2");
 
-        Key key1 = Key.build(KEYS[3]);
-        Key key2 = Key.build(KEYS[4]);
-        
-        kad1.put(key1, "Value");
-        kad3.put(key2, "Value2");
+            assertThat(kad1.get(key1), equalTo("Value"));
+            assertThat(kad2.get(key1), equalTo("Value"));
+            assertThat(kad3.get(key1), equalTo("Value"));
 
-        assertThat(kad1.get(key1), equalTo("Value"));
-        assertThat(kad2.get(key1), equalTo("Value"));
-        assertThat(kad3.get(key1), equalTo("Value"));
-
-        assertThat(kad1.get(key2), equalTo("Value2"));
-        assertThat(kad2.get(key2), equalTo("Value2"));
-        assertThat(kad3.get(key2), equalTo("Value2"));
-
-        kad1.close();
-        kad2.close();
-        kad3.close();
+            assertThat(kad1.get(key2), equalTo("Value2"));
+            assertThat(kad2.get(key2), equalTo("Value2"));
+            assertThat(kad3.get(key2), equalTo("Value2"));
+        }
+        finally {
+            kad1.close();
+            kad2.close();
+            kad3.close();
+        }
     }
 
     @Test
-    public void retryTest() throws InterruptedException, ExecutionException {
+    public void retryTest() {
         Kademlia kad1 = new Kademlia(
                 Key.build(KEYS[0]),
                 "127.0.0.1", 9001
         );
 
-        kad1.client.sendPing("127.0.0.2", 9002, pong -> {
+        try {
+            kad1.client.sendPing("127.0.0.2", 9002, pong -> {
 
-        });
-        kad1.close();
+            });
+        }
+        finally {
+            kad1.close();
+        }
     }
 
     @Test
-    public void complexRoutingTest() throws InterruptedException, ExecutionException {
+    public void complexRoutingTest() {
         Kademlia kad1 = new Kademlia(
                 Key.build(KEYS[0]),
                 "127.0.0.1", 9001
@@ -151,20 +160,21 @@ public class KademliaNodeTest {
                 "127.0.0.1", 9004
         );
 
-        kad2.bootstrap("127.0.0.1", 9001);
-        kad3.bootstrap("127.0.0.1", 9002);
-        kad4.bootstrap("127.0.0.1", 9003);
+        try {
+            kad2.bootstrap("127.0.0.1", 9001);
+            kad3.bootstrap("127.0.0.1", 9002);
+            kad4.bootstrap("127.0.0.1", 9003);
 
-        Thread.sleep(10000);
+            Key key1 = Key.build(KEYS[0]);
+            kad4.put(key1, "Value");
 
-        Key key1 = Key.build(KEYS[0]);
-        kad4.put(key1, "Value");
-
-        assertThat(kad1.get(key1), equalTo("Value"));
-
-        kad1.close();
-        kad2.close();
-        kad3.close();
-        kad4.close();
+            assertThat(kad1.get(key1), equalTo("Value"));
+        }
+        finally {
+            kad1.close();
+            kad2.close();
+            kad3.close();
+            kad4.close();
+        }
     }
 }
