@@ -28,15 +28,15 @@ kad.get("key");
 ```
 
 # Open Points
-[ ] Extend Testing
-[x] Bucket Refreshing
-[x] Key Republishing
-[x] Client retry behavior
-[ ] Caching
-[ ] Store value as continuous log of events?
-[ ] Provide TLS encryption with Key Exchange for inter node communication
-[ ] provide local Unix Domain Socket interface for IPC
-[ ] Switchable local storage implementation (e.g. to enable other storage engines like Levels DB)
+- [ ] Extend Testing
+- [x] Bucket Refreshing
+- [x] Key Republishing
+- [x] Client retry behavior
+- [ ] Caching
+- [ ] Store value as continuous log of events?
+- [ ] Provide TLS encryption with Key Exchange for inter node communication
+- [ ] provide local Unix Domain Socket interface for IPC
+- [ ] Switchable local storage implementation (e.g. to enable other storage engines like Levels DB)
 
 # Credit goes to
 Joshua Kissoon and his work on Kademlia where I took inspiration from. https://github.com/JoshuaKissoon/Kademlia
