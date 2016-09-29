@@ -32,8 +32,6 @@ public class Kademlia {
     protected final KademliaClient client;
     protected final KademliaServer server;
 
-    protected final Codec codec = new Codec();
-
     protected final LocalStorage localStorage;
     protected final Node localNode;
 
