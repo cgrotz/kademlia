@@ -12,7 +12,7 @@
 
     <groupId>de.cgrotz</groupId>
     <artifactId>kademlia</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0.0-SNAPSHOT</version>
     <name>kademlia</name>
     <description>Kademlia DHT implementation</description>
     <url>https://github.com/cgrotz/kademlia</url>
