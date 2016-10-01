@@ -14,7 +14,7 @@ Simply include Kademlia as a dependency in your code:
 </dependency>
 ```
 
-```javascript
+```java
 // In production the nodeId would preferably be static for one node
 Kademlia kad = new Kademlia(new NodeId(), "127.0.0.1", 9000);
 // Bootstrap using a remote server (there is no special configuration on the remote server necessary)
@@ -26,6 +26,8 @@ kad.get("key", value -> { ... });
 // Or synchronously with
 kad.get("key");
 ```
+
+See the [Getting Started](docs/Getting_Started.md) guide for more information.
 
 # Open Points
 - [ ] Extend Testing

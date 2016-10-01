@@ -26,7 +26,7 @@ public class Retry {
                 sender.run();
                 return;
             } catch (Exception exp) {
-                LOGGER.warn("Unable to send message, failed with {}, retry number={} in interval={}ms", exp, currentRetry, interval);
+                LOGGER.warn("Unable to send message, failed with {}, retry number={} in interval={}ms", exp, currentRetry, interval, exp);
                 currentRetry++;
             }
 

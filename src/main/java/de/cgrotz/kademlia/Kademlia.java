@@ -1,6 +1,8 @@
 package de.cgrotz.kademlia;
 
 import de.cgrotz.kademlia.client.KademliaClient;
+import de.cgrotz.kademlia.config.Listener;
+import de.cgrotz.kademlia.config.UdpListener;
 import de.cgrotz.kademlia.node.Key;
 import de.cgrotz.kademlia.node.Node;
 import de.cgrotz.kademlia.protocol.Codec;
@@ -13,6 +15,8 @@ import io.netty.util.internal.ConcurrentSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -30,47 +34,62 @@ public class Kademlia {
 
     protected final RoutingTable routingTable;
     protected final KademliaClient client;
-    protected final KademliaServer server;
+    protected final List<KademliaServer> servers = new ArrayList<>();
 
     protected final LocalStorage localStorage;
     protected final Node localNode;
 
     protected final Configuration config;
 
-    public Kademlia(Key nodeId, String hostname, int port) {
+    public Kademlia(Key nodeId) {
         this(Configuration.defaults()
                 .nodeId(nodeId)
-                .bindingAddress(hostname).bindingPort(port)
-                .advertisingAddress(hostname).advertisingPort(port)
+                .build());
+    }
+
+    public Kademlia(Key nodeId, String listeners) {
+        this(Configuration.defaults()
+                .nodeId(nodeId)
+                .listeners(
+                    Arrays.stream(listeners.split(",")).map(Listener::fromUrl).collect(Collectors.toList())
+                )
+                .advertisedListeners(
+                    Arrays.stream(listeners.split(",")).map(Listener::fromUrl).collect(Collectors.toList())
+                )
                 .build());
     }
 
     public Kademlia(Configuration config){
         this.config = config;
         this.localNode = Node.builder().id(config.getNodeId())
-                .address(config.getAdvertisingAddress())
-                .port(config.getAdvertisingPort())
+                .advertisedListeners(config.getAdvertisedListeners())
                 .build();
 
         this.client = new KademliaClient(config, localNode);
 
         this.routingTable = new RoutingTable(config.getKValue(), config.getNodeId(), client);
         this.localStorage =  new InMemoryStorage();
-        this.server = new KademliaServer(config.getBindingAddress(), config.getBindingPort(),
-                config.getKValue(), routingTable, localStorage, localNode);
+
+        config.getListeners().stream().filter(listener -> listener instanceof UdpListener)
+                .map(listener -> (UdpListener)listener)
+                .forEach( listener ->  {
+                    this.servers.add(new KademliaServer(listener.getHost(), listener.getPort(),
+                            config.getKValue(), routingTable, localStorage, localNode));
+                });
     }
 
-    public void bootstrap(String hostname, int port) {
+    public void bootstrap(Node bootstrapNode) {
         LOGGER.debug("bootstrapping node={}", localNode);
-        client.sendPing(hostname, port, pong -> {
-            LOGGER.debug("bootstrapping node={}, ping from remote={}:{} received", localNode, hostname, port);
-            routingTable.addNode(pong.getOrigin().getId(), pong.getOrigin().getAddress(), pong.getOrigin().getPort());
+
+        client.sendPing(bootstrapNode, pong -> {
+            LOGGER.debug("bootstrapping node={}, ping from remote={} received", localNode, bootstrapNode);
+            routingTable.addNode(pong.getOrigin());
         });
 
         // FIND_NODE with own IDs to find nearby nodes
-        client.sendFindNode(hostname, port, localNode.getId(), nodes -> {
-            LOGGER.debug("bootstrapping node={}, sendFind node from remote={}:{} received, nodes={}", localNode, hostname, port, nodes.size());
-            nodes.stream().forEach(node -> routingTable.addNode(node.getId(), node.getAddress(), node.getPort()));
+        client.sendFindNode(bootstrapNode, localNode.getId(), nodes -> {
+            LOGGER.debug("bootstrapping node={}, sendFind node from remote={} received, nodes={}", localNode, bootstrapNode, nodes.size());
+            nodes.stream().forEach(node -> routingTable.addNode(node));
         });
 
         LOGGER.debug("bootstrapping node={}, refreshing buckets", localNode);
@@ -84,7 +103,7 @@ public class Kademlia {
      * @param value
      */
     public void put(Key key, String value) {
-        client.sendFindNode(localNode.getAddress(), localNode.getPort(), key, nodes -> {
+        client.sendFindNode(localNode, key, nodes -> {
             nodes.stream().forEach(node -> {
                 client.sendContentToNode( node, key ,value);
             });
@@ -137,9 +156,9 @@ public class Kademlia {
     private void get(AtomicBoolean found, Key key, List<Node> nodes, ConcurrentSet<Node> alreadyCheckedNodes, Consumer<ValueReply> valueReplyConsumer) {
         for( Node node : nodes) {
             if(!alreadyCheckedNodes.contains(node) && !found.get()) {
-                client.sendFindValue(node.getAddress(), node.getPort(),
+                client.sendFindValue(node,
                         key, nodeReply -> {
-                            nodeReply.getNodes().stream().forEach(newNode -> routingTable.addNode(newNode.getId(), newNode.getAddress(), newNode.getPort()));
+                            nodeReply.getNodes().stream().forEach(newNode -> routingTable.addNode(newNode));
                             get(found, key, nodeReply.getNodes(), alreadyCheckedNodes, valueReplyConsumer);
                         }, valueReplyConsumer);
 
@@ -172,8 +191,8 @@ public class Kademlia {
             routingTable.getBucketStream()
                     .flatMap(bucket -> bucket.getNodes().stream())
                     .forEach(node -> {
-                        client.sendFindNode(node.getAddress(), node.getPort(), current, nodes -> {
-                            nodes.stream().forEach(newNode -> routingTable.addNode(newNode.getId(), newNode.getAddress(), newNode.getPort()));
+                        client.sendFindNode(node, current, nodes -> {
+                            nodes.stream().forEach(newNode -> routingTable.addNode(newNode));
                         });
                     });
 
@@ -181,7 +200,7 @@ public class Kademlia {
     }
 
     public void close() {
-        server.close();
+        servers.forEach(KademliaServer::close);
         client.close();
     }
 }

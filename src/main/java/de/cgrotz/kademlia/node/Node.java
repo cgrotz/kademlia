@@ -1,8 +1,12 @@
 package de.cgrotz.kademlia.node;
 
+import de.cgrotz.kademlia.config.Listener;
 import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.Singular;
+
+import java.util.List;
 
 /**
  * Created by Christoph on 21.09.2016.
@@ -12,8 +16,8 @@ import lombok.EqualsAndHashCode;
 @Builder
 public class Node implements Comparable<Node>{
     private Key id;
-    private String address;
-    private int port;
+    @Singular
+    private final List<Listener> advertisedListeners;
     private long lastSeen = System.currentTimeMillis();
 
     @Override

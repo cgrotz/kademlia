@@ -27,15 +27,14 @@ public class Bucket {
         this.client = client;
     }
 
-    public void addNode(Key nodeId, String host, int port) {
-        Node node = Node.builder().id(nodeId).address(host).port(port).build();
+    public void addNode(Node node) {
         if(nodes.size() < k) {
             nodes.add(node);
         }
         else {
             Node last = nodes.last();
             try {
-                client.sendPing(last.getAddress(),last.getPort(), message -> {
+                client.sendPing(last, message -> {
                     Pong pong = (Pong)message;
                     nodes.remove(last);
                     last.setLastSeen(System.currentTimeMillis());
@@ -64,7 +63,7 @@ public class Bucket {
         // Check nodes on reachability and update
         copySet.stream().forEach(node -> {
             try {
-                client.sendPing(node.getAddress(), node.getPort(), pong -> {
+                client.sendPing(node, pong -> {
                     nodes.remove(node);
                     node.setLastSeen(System.currentTimeMillis());
                     nodes.add(node);
@@ -79,7 +78,7 @@ public class Bucket {
         while(nodes.size() < k && !replacementNodes.isEmpty()) {
             Node node = replacementNodes.first();
             try {
-                client.sendPing(node.getAddress(), node.getPort(), pong -> {
+                client.sendPing(node, pong -> {
                     replacementNodes.remove(node);
                     node.setLastSeen(System.currentTimeMillis());
                     nodes.add(node);
@@ -98,7 +97,7 @@ public class Bucket {
         while(nodes.size() < k && !replacementNodes.isEmpty()) {
             Node node = replacementNodes.first();
             try {
-                client.sendPing(node.getAddress(), node.getPort(), pong -> {
+                client.sendPing(node, pong -> {
                     replacementNodes.remove(node);
                     node.setLastSeen(System.currentTimeMillis());
                     nodes.add(node);

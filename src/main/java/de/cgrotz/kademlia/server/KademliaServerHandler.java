@@ -42,7 +42,7 @@ public class KademliaServerHandler extends SimpleChannelInboundHandler<DatagramP
         LOGGER.debug("Received message type={},seqId={} from node={}", message.getType(),message.getSeqId(), message.getOrigin());
         if(message.getType() == MessageType.PING) {
             Ping ping = (Ping)message;
-            routingTable.addNode(ping.getOrigin().getId(), ping.getOrigin().getAddress(), ping.getOrigin().getPort());
+            routingTable.addNode(ping.getOrigin());
             ctx.writeAndFlush(new DatagramPacket(codec.encode(new Pong(message.getSeqId(),localNode)), packet.sender()));
         }
         else if(message.getType() == MessageType.FIND_NODE) {

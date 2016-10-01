@@ -1,6 +1,8 @@
 package de.cgrotz.kademlia;
 
+import de.cgrotz.kademlia.config.UdpListener;
 import de.cgrotz.kademlia.node.Key;
+import de.cgrotz.kademlia.node.Node;
 import org.junit.Test;
 
 import static org.hamcrest.MatcherAssert.*;
@@ -22,17 +24,17 @@ public class KademliaNodeTest {
     @Test
     public void bootstrapTest() {
         Kademlia kad1 = new Kademlia(
-                Key.build(KEYS[0]),
-                "127.0.0.1", 9001
-        );
+                Key.build(KEYS[0]),"udp://127.0.0.1:9001");
 
         Kademlia kad2 = new Kademlia(
                 Key.build(KEYS[1]),
-                "127.0.0.1", 9002
+                "udp://127.0.0.1:9002"
         );
         
         try {
-            kad2.bootstrap("127.0.0.1", 9001);
+            kad2.bootstrap(Node.builder().advertisedListener(
+                new UdpListener("udp://127.0.0.1:9001")
+            ).build());
 
             assertThat(kad1.routingTable.getBuckets()[158].getNodes(), contains(kad2.localNode));
             assertThat(kad2.routingTable.getBuckets()[158].getNodes(), contains(kad1.localNode));
@@ -47,16 +49,18 @@ public class KademliaNodeTest {
     public void storeAndRetrieveTest() {
         Kademlia kad1 = new Kademlia(
                 Key.build(KEYS[0]),
-                "127.0.0.1", 9001
+                "udp://127.0.0.1:9001"
         );
 
         Kademlia kad2 = new Kademlia(
                 Key.build(KEYS[1]),
-                "127.0.0.1", 9002
+                "udp://127.0.0.1:9002"
         );
         
         try {
-            kad2.bootstrap("127.0.0.1", 9001);
+            kad2.bootstrap(Node.builder().advertisedListener(
+                    new UdpListener("udp://127.0.0.1:9001")
+            ).build());
         
             assertThat(kad1.routingTable.getBuckets()[158].getNodes(), contains(kad2.localNode));
             assertThat(kad2.routingTable.getBuckets()[158].getNodes(), contains(kad1.localNode));
@@ -76,26 +80,32 @@ public class KademliaNodeTest {
     public void simpleTest() {
         Kademlia kad1 = new Kademlia(
                 Key.build(KEYS[0]),
-                "127.0.0.1", 9001
+                "udp://127.0.0.1:9001"
         );
 
         Kademlia kad2 = new Kademlia(
                 Key.build(KEYS[1]),
-                "127.0.0.1", 9002
+                "udp://127.0.0.1:9002"
         );
 
         Kademlia kad3 = new Kademlia(
                 Key.build(KEYS[2]),
-                "127.0.0.1", 9003
+                "udp://127.0.0.1:9003"
         );
         try {
-            kad2.bootstrap("127.0.0.1", 9001);
-            kad3.bootstrap("127.0.0.1", 9001);
+
+            kad2.bootstrap(Node.builder().advertisedListener(
+                    new UdpListener("udp://127.0.0.1:9001")
+            ).build());
+
+            kad3.bootstrap(Node.builder().advertisedListener(
+                    new UdpListener("udp://127.0.0.1:9001")
+            ).build());
 
             assertThat(kad1.routingTable.getBuckets()[158].getNodes(), contains(kad2.localNode));
             assertThat(kad1.routingTable.getBuckets()[157].getNodes(), contains(kad3.localNode));
 
-            assertThat(kad2.routingTable.getBuckets()[158].getNodes(), contains(kad3.localNode, kad1.localNode));
+            assertThat(kad2.routingTable.getBuckets()[158].getNodes(), contains(kad1.localNode, kad3.localNode));
 
             assertThat(kad3.routingTable.getBuckets()[157].getNodes(), containsInAnyOrder(kad1.localNode));
             assertThat(kad3.routingTable.getBuckets()[158].getNodes(), containsInAnyOrder(kad2.localNode));
@@ -125,12 +135,13 @@ public class KademliaNodeTest {
     public void retryTest() {
         Kademlia kad1 = new Kademlia(
                 Key.build(KEYS[0]),
-                "127.0.0.1", 9001
+                "udp://127.0.0.1:9001"
         );
 
         try {
-            kad1.client.sendPing("127.0.0.2", 9002, pong -> {
+            Node remote = Node.builder().advertisedListener(new UdpListener("udp://127.0.0.2:9002")).build();
 
+            kad1.client.sendPing(remote, pong -> {
             });
         }
         finally {
@@ -142,28 +153,36 @@ public class KademliaNodeTest {
     public void complexRoutingTest() {
         Kademlia kad1 = new Kademlia(
                 Key.build(KEYS[0]),
-                "127.0.0.1", 9001
+                "udp://127.0.0.1:9001"
         );
 
         Kademlia kad2 = new Kademlia(
                 Key.build(KEYS[1]),
-                "127.0.0.1", 9002
+                "udp://127.0.0.1:9002"
         );
 
         Kademlia kad3 = new Kademlia(
                 Key.build(KEYS[2]),
-                "127.0.0.1", 9003
+                "udp://127.0.0.1:9003"
         );
 
         Kademlia kad4 = new Kademlia(
                 Key.build(KEYS[3]),
-                "127.0.0.1", 9004
+                "udp://127.0.0.1:9004"
         );
 
         try {
-            kad2.bootstrap("127.0.0.1", 9001);
-            kad3.bootstrap("127.0.0.1", 9002);
-            kad4.bootstrap("127.0.0.1", 9003);
+            kad2.bootstrap(Node.builder().advertisedListener(
+                    new UdpListener("udp://127.0.0.1:9001")
+            ).build());
+
+            kad3.bootstrap(Node.builder().advertisedListener(
+                    new UdpListener("udp://127.0.0.1:9002")
+            ).build());
+
+            kad4.bootstrap(Node.builder().advertisedListener(
+                    new UdpListener("udp://127.0.0.1:9003")
+            ).build());
 
             Key key1 = Key.build(KEYS[0]);
             kad4.put(key1, "Value");

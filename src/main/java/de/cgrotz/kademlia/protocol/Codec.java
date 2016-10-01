@@ -1,16 +1,18 @@
 package de.cgrotz.kademlia.protocol;
 
+import de.cgrotz.kademlia.config.Listener;
+import de.cgrotz.kademlia.config.ListenerType;
+import de.cgrotz.kademlia.config.UdpListener;
 import de.cgrotz.kademlia.node.Key;
 import de.cgrotz.kademlia.node.Node;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.CharsetUtil;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Created by Christoph on 21.09.2016.
@@ -23,10 +25,10 @@ public class Codec {
         String message = buffer.toString(CharsetUtil.UTF_8);
         String[] parts = message.split("\\|");
         long seqId = Long.parseLong(parts[1]);
-        Node origin = decodeOrigin(parts);
+        Node origin = decodeNode(parts[2]);
 
         if(parts[0].equals(MessageType.FIND_NODE.name())) {
-            return new FindNode(seqId, origin, Key.build(parts[2]));
+            return new FindNode(seqId, origin, Key.build(parts[3]));
         }
         else if(parts[0].equals(MessageType.PING.name())) {
             return new Ping( seqId, origin );
@@ -36,26 +38,25 @@ public class Codec {
         }
         else if(parts[0].equals(MessageType.NODE_REPLY.name())) {
             List<Node> nodes = new ArrayList<>();
-            for(int i = 5; i< parts.length; i++) {
-                String[] address = parts[i].split(":");
-                nodes.add(Node.builder().id(Key.build(address[0])).address(address[1]).port(Integer.parseInt(address[2])).lastSeen(System.currentTimeMillis()).build());
+            for(int i = 3; i< parts.length; i++) {
+                nodes.add(decodeNode(parts[i]));
             }
             return new NodeReply(seqId, origin, nodes);
         }
         else if(parts[0].equals(MessageType.STORE.name())) {
             return new Store(seqId, origin,
-                    Key.build(parts[5]),
-                    new String(decoder.decode(parts[6]), CharsetUtil.UTF_8.name()));
+                    Key.build(parts[3]),
+                    new String(decoder.decode(parts[4]), CharsetUtil.UTF_8.name()));
         }
         else if(parts[0].equals(MessageType.STORE_REPLY.name())) {
             return new StoreReply(seqId, origin);
         }
         else if(parts[0].equals(MessageType.FIND_VALUE.name())) {
-            return new FindValue(seqId, origin, Key.build(parts[5]));
+            return new FindValue(seqId, origin, Key.build(parts[3]));
         }
         else if(parts[0].equals(MessageType.VALUE_REPLY.name())) {
             return new ValueReply(seqId, origin,
-                    Key.build(parts[5]), parts[6]);
+                    Key.build(parts[3]), parts[4]);
         }
         else {
             System.out.println("Can't decode message_type="+parts[0]);
@@ -63,8 +64,34 @@ public class Codec {
         }
     }
 
-    private Node decodeOrigin(String[] parts) {
-        return Node.builder().id(Key.build(parts[2])).address(parts[3]).port(Integer.parseInt(parts[4])).lastSeen(System.currentTimeMillis()).build();
+    private Node decodeNode(String nodeEncoded) {
+        String[] nodeParts = nodeEncoded.split(",");
+
+        return Node.builder().id(Key.build(nodeParts[0]))
+                .advertisedListeners(
+                    Arrays.stream(nodeParts).skip(1)
+                            .map( url ->
+                                Listener.fromUrl(url)
+                            ).collect(Collectors.toList())
+                )
+                .lastSeen(System.currentTimeMillis())
+                .build();
+    }
+
+    private String encodeNode(Node node) {
+        return node.getId()+","+node.getAdvertisedListeners().stream()
+        .filter( listener -> listener != null )
+        .map(
+            listener -> {
+                if(listener.getType() == ListenerType.UDP) {
+                    UdpListener udpListener = (UdpListener)listener;
+                    return "udp://"+udpListener.getHost()+":"+udpListener.getPort();
+                }
+                else {
+                    throw new NotImplementedException();
+                }
+            }
+        ).collect(Collectors.joining(","));
     }
 
     public ByteBuf encode(Ping msg) {
@@ -90,7 +117,7 @@ public class Codec {
         ByteBuf byteBuf = Unpooled.buffer();
         encodeHeader(byteBuf, msg);
         for( Node node : msg.getNodes()) {
-            byteBuf.writeCharSequence( "|"+ node.getId().toString()+":"+node.getAddress()+":"+node.getPort(), CharsetUtil.UTF_8);
+            byteBuf.writeCharSequence( "|"+ encodeNode(node), CharsetUtil.UTF_8);
         }
         return byteBuf;
     }
@@ -126,7 +153,7 @@ public class Codec {
 
     private void encodeHeader(ByteBuf byteBuf, Message msg) {
         byteBuf.writeCharSequence(msg.getType().name()+"|"+ msg.getSeqId(), CharsetUtil.UTF_8);
-        byteBuf.writeCharSequence("|"+msg.getOrigin().getId()+"|"+ msg.getOrigin().getAddress()+"|"+ msg.getOrigin().getPort(), CharsetUtil.UTF_8);
+        byteBuf.writeCharSequence("|"+encodeNode(msg.getOrigin()), CharsetUtil.UTF_8);
     }
 
     public ByteBuf encode(Message msg) throws UnsupportedEncodingException {

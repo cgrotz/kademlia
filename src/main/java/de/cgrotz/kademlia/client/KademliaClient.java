@@ -1,6 +1,9 @@
 package de.cgrotz.kademlia.client;
 
 import de.cgrotz.kademlia.Configuration;
+import de.cgrotz.kademlia.config.ListenerType;
+import de.cgrotz.kademlia.config.UdpListener;
+import de.cgrotz.kademlia.exception.NoMatchingListener;
 import de.cgrotz.kademlia.exception.TimeoutException;
 import de.cgrotz.kademlia.node.Key;
 import de.cgrotz.kademlia.node.Node;
@@ -54,18 +57,24 @@ public class KademliaClient {
                 .handler(kademliaClientHandler);
     }
 
-    private void send(String hostname, int port, long seqId, Message msg, Consumer<Message> consumer) throws TimeoutException {
+    private void send(Node node, long seqId, Message msg, Consumer<Message> consumer) throws TimeoutException, NoMatchingListener {
         kademliaClientHandler.registerHandler(seqId, consumer);
+
+        UdpListener udpListener = node.getAdvertisedListeners().stream()
+                .filter(listener -> listener.getType() == ListenerType.UDP)
+                .map(listener -> (UdpListener) listener)
+                .findFirst().orElseThrow(() -> new NoMatchingListener());
+
         Retry.builder()
                 .interval(1000)
                 .retries(3)
                 .sender(() -> {
                     try {
                         Channel channel = bootstrap.bind(0).sync().channel();
-                        LOGGER.debug("requesting seqId={} msg={} on host={}:{}", seqId, msg, hostname, port);
+                        LOGGER.debug("requesting seqId={} msg={} on host={}:{}", seqId, msg, udpListener.getHost(), udpListener.getPort());
                         channel.writeAndFlush(new DatagramPacket(
                                 codec.encode(msg),
-                                new InetSocketAddress(hostname, port))).sync();
+                                new InetSocketAddress(udpListener.getHost(), udpListener.getPort()))).sync();
 
                         if (!channel.closeFuture().await(config.getNetworkTimeoutMs())) {
                             LOGGER.warn("request with seqId={} on node={} timed out.", seqId, localNode);
@@ -80,17 +89,17 @@ public class KademliaClient {
                 }).build().execute();
     }
 
-    public void sendPing(String hostname, int port, Consumer<Pong> pongConsumer) throws TimeoutException {
+    public void sendPing(Node node, Consumer<Pong> pongConsumer) throws TimeoutException {
         long seqId = random.nextLong();
-        send(hostname, port, seqId,new Ping(seqId,localNode), msg -> {
+        send(node, seqId,new Ping(seqId,localNode), msg -> {
             pongConsumer.accept((Pong)msg);
         });
     }
 
 
-    public void sendFindNode(String hostname, int port, Key key, Consumer<List<Node>> callback) throws TimeoutException {
+    public void sendFindNode(Node node, Key key, Consumer<List<Node>> callback) throws TimeoutException {
         long seqId = random.nextLong();
-        send(hostname, port, seqId,new FindNode(seqId,localNode, key),
+        send(node, seqId,new FindNode(seqId,localNode, key),
                 message -> {
                     NodeReply nodeReply = (NodeReply) message;
                     callback.accept(nodeReply.getNodes());
@@ -98,10 +107,10 @@ public class KademliaClient {
         );
     }
 
-    public void sendFindValue(String hostname, int port, Key key,
+    public void sendFindValue(Node node, Key key,
                               Consumer<NodeReply> nodeReplyConsumer, Consumer<ValueReply> valueReplyConsumer) throws TimeoutException {
         long seqId = random.nextLong();
-        send(hostname, port, seqId, new FindValue(seqId,localNode, key),
+        send(node, seqId, new FindValue(seqId,localNode, key),
                 message -> {
                     if (message.getType() == MessageType.NODE_REPLY) {
                         NodeReply nodeReply = (NodeReply) message;
@@ -117,7 +126,7 @@ public class KademliaClient {
 
     public void sendContentToNode(Node node, Key key, String value) throws TimeoutException {
         final long seqId = random.nextLong();
-        send(node.getAddress(), node.getPort(), seqId, new Store(seqId,localNode, key, value),
+        send(node, seqId, new Store(seqId,localNode, key, value),
                 message -> {
 
                 }
