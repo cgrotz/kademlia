@@ -3,6 +3,7 @@ package de.cgrotz.kademlia;
 import de.cgrotz.kademlia.client.KademliaClient;
 import de.cgrotz.kademlia.config.Listener;
 import de.cgrotz.kademlia.config.UdpListener;
+import de.cgrotz.kademlia.events.Event;
 import de.cgrotz.kademlia.node.Key;
 import de.cgrotz.kademlia.node.Node;
 import de.cgrotz.kademlia.protocol.Codec;
@@ -15,9 +16,7 @@ import io.netty.util.internal.ConcurrentSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -40,6 +39,8 @@ public class Kademlia {
     protected final Node localNode;
 
     protected final Configuration config;
+
+    private final Map<String, Consumer<Event>> eventListeners = new HashMap<>();
 
     public Kademlia(Key nodeId) {
         this(Configuration.defaults()
@@ -74,7 +75,7 @@ public class Kademlia {
                 .map(listener -> (UdpListener)listener)
                 .forEach( listener ->  {
                     this.servers.add(new KademliaServer(listener.getHost(), listener.getPort(),
-                            config.getKValue(), routingTable, localStorage, localNode));
+                            config.getKValue(), routingTable, localStorage, localNode, eventListeners));
                 });
     }
 
@@ -199,8 +200,24 @@ public class Kademlia {
         }
     }
 
+    public RoutingTable getRoutingTable() {
+        return routingTable;
+    }
+
+    public Node getLocalNode() {
+        return localNode;
+    }
+
     public void close() {
         servers.forEach(KademliaServer::close);
         client.close();
+    }
+
+    public void addEventListener(String registrationId, Consumer<Event> eventConsumer) {
+        this.eventListeners.put(registrationId, eventConsumer);
+    }
+
+    public void removeEventListener(String registrationId) {
+        this.eventListeners.remove(registrationId);
     }
 }

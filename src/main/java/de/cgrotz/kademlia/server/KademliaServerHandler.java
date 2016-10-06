@@ -1,5 +1,7 @@
 package de.cgrotz.kademlia.server;
 
+import de.cgrotz.kademlia.events.Event;
+import de.cgrotz.kademlia.events.ReceivedMessageEvent;
 import de.cgrotz.kademlia.node.Node;
 import de.cgrotz.kademlia.node.Key;
 import de.cgrotz.kademlia.protocol.*;
@@ -13,6 +15,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  * Created by Christoph on 21.09.2016.
@@ -23,21 +27,26 @@ public class KademliaServerHandler extends SimpleChannelInboundHandler<DatagramP
 
     private final RoutingTable routingTable;
     private final int kValue;
+    private final Map<String, Consumer<Event>> eventConsumers;
     private Codec codec = new Codec();
     private final Node localNode;
     private final LocalStorage localStorage;
 
-    public KademliaServerHandler(RoutingTable routingTable, LocalStorage localStorage, Node localNode, int kValue) {
+    public KademliaServerHandler(RoutingTable routingTable, LocalStorage localStorage, Node localNode, int kValue, Map<String, Consumer<Event>> eventConsumers) {
         this.routingTable = routingTable;
         this.localNode = localNode;
         this.kValue = kValue;
         this.localStorage = localStorage;
+        this.eventConsumers = eventConsumers;
     }
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, DatagramPacket packet) throws Exception {
         Message message = codec.decode(packet.content());
         routingTable.addNode(message.getOrigin());
+        eventConsumers.forEach((s, eventConsumer) -> {
+            eventConsumer.accept(ReceivedMessageEvent.builder().message(message).build());
+        });
 
         LOGGER.debug("Received message type={},seqId={} from node={}", message.getType(),message.getSeqId(), message.getOrigin());
         if(message.getType() == MessageType.PING) {

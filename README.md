@@ -2,7 +2,7 @@ Kademlia
 ========
 
 # Description
-This is a basic DHT implementation using the Kademlia routing protocol.
+This is a basic DHT implementation using the Kademlia routing protocol. It's not an implementation of a full Kademlia node. I will provide an example of such an example later.
 
 # Usage
 Simply include Kademlia as a dependency in your code:
@@ -27,7 +27,7 @@ kad.get("key", value -> { ... });
 kad.get("key");
 ```
 
-See the [Getting Started](docs/Getting_Started.md) guide for more information.
+See the [Getting Started](docs/Getting_Started.md) guide for more information. [Protocol](docs/protocol.md) gives you information on the protocol.
 
 # Open Points
 - [ ] Extend Testing
