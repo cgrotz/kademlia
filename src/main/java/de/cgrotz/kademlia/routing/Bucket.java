@@ -2,7 +2,6 @@ package de.cgrotz.kademlia.routing;
 
 import de.cgrotz.kademlia.client.KademliaClient;
 import de.cgrotz.kademlia.exception.TimeoutException;
-import de.cgrotz.kademlia.node.Key;
 import de.cgrotz.kademlia.node.Node;
 import de.cgrotz.kademlia.protocol.Pong;
 import lombok.Data;
@@ -16,8 +15,8 @@ import java.util.TreeSet;
 public class Bucket {
     private final int bucketId;
 
-    private final TreeSet<Node> nodes = new TreeSet<>();
-    private final TreeSet<Node> replacementNodes = new TreeSet<>();
+    private final TreeSet<Node> nodes;
+    private final TreeSet<Node> replacementNodes;
     private final int k;
     private final KademliaClient client;
 
@@ -25,6 +24,9 @@ public class Bucket {
         this.k = k;
         this.bucketId = bucketId;
         this.client = client;
+
+        this.nodes = new TreeSet<>();
+        this.replacementNodes = new TreeSet<>();
     }
 
     public void addNode(Node node) {

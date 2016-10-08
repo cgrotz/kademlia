@@ -1,8 +1,6 @@
 package de.cgrotz.kademlia;
 
 import de.cgrotz.kademlia.config.Listener;
-import de.cgrotz.kademlia.config.ListenerType;
-import de.cgrotz.kademlia.config.UdpListener;
 import de.cgrotz.kademlia.node.Key;
 import lombok.Builder;
 import lombok.Data;

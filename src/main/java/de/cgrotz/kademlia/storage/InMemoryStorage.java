@@ -34,11 +34,4 @@ public class InMemoryStorage implements LocalStorage {
             entry.getValue().getLastPublished() <= timestamp
         ).map(entry -> entry.getKey()).collect(Collectors.toList());
     }
-
-    @Override
-    public void updateLastPublished(Key key, long timestamp) {
-        Value node = map.get(key);
-        node.setLastPublished(timestamp);
-        map.put(key, node);
-    }
 }

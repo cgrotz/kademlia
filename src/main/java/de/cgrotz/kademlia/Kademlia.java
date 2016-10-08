@@ -6,7 +6,6 @@ import de.cgrotz.kademlia.config.UdpListener;
 import de.cgrotz.kademlia.events.Event;
 import de.cgrotz.kademlia.node.Key;
 import de.cgrotz.kademlia.node.Node;
-import de.cgrotz.kademlia.protocol.Codec;
 import de.cgrotz.kademlia.protocol.ValueReply;
 import de.cgrotz.kademlia.routing.RoutingTable;
 import de.cgrotz.kademlia.server.KademliaServer;
@@ -49,18 +48,27 @@ public class Kademlia {
     }
 
     public Kademlia(Key nodeId, String listeners) {
+        this(nodeId, listeners, new InMemoryStorage());
+    }
+
+
+    public Kademlia(Key nodeId, String listeners, LocalStorage localStorage) {
         this(Configuration.defaults()
                 .nodeId(nodeId)
                 .listeners(
-                    Arrays.stream(listeners.split(",")).map(Listener::fromUrl).collect(Collectors.toList())
+                        Arrays.stream(listeners.split(",")).map(Listener::fromUrl).collect(Collectors.toList())
                 )
                 .advertisedListeners(
-                    Arrays.stream(listeners.split(",")).map(Listener::fromUrl).collect(Collectors.toList())
+                        Arrays.stream(listeners.split(",")).map(Listener::fromUrl).collect(Collectors.toList())
                 )
-                .build());
+                .build(), localStorage);
     }
 
     public Kademlia(Configuration config){
+        this(config, new InMemoryStorage());
+    }
+
+    public Kademlia(Configuration config, LocalStorage localStorage){
         this.config = config;
         this.localNode = Node.builder().id(config.getNodeId())
                 .advertisedListeners(config.getAdvertisedListeners())
@@ -69,7 +77,7 @@ public class Kademlia {
         this.client = new KademliaClient(config, localNode);
 
         this.routingTable = new RoutingTable(config.getKValue(), config.getNodeId(), client);
-        this.localStorage =  new InMemoryStorage();
+        this.localStorage =  localStorage;
 
         config.getListeners().stream().filter(listener -> listener instanceof UdpListener)
                 .map(listener -> (UdpListener)listener)

@@ -22,7 +22,7 @@ public class RoutingTable {
 
     private final Bucket[] buckets;
 
-    public RoutingTable(int k, Key localNodeId, KademliaClient client) {
+    public RoutingTable(int k, Key localNodeId,  KademliaClient client) {
         this.localNodeId = localNodeId;
         buckets = new Bucket[Key.ID_LENGTH];
         for (int i = 0; i < Key.ID_LENGTH; i++)

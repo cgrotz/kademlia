@@ -16,5 +16,9 @@ public interface LocalStorage {
 
     List<Key> getKeysBeforeTimestamp(long timestamp);
 
-    void updateLastPublished(Key key, long timestamp);
+    default void updateLastPublished(Key key, long timestamp) {
+        Value node = get(key);
+        node.setLastPublished(timestamp);
+        put(key, node);
+    }
 }
