@@ -2,7 +2,8 @@ Kademlia
 ========
 
 # Description
-This is a basic DHT implementation using the Kademlia routing protocol. It's not an implementation of a full Kademlia node. I will provide an example of such an example later.
+This is a basic DHT implementation using the Kademlia routing protocol. It's not an implementation of a full Kademlia node.
+You can find an example implementation of a Kademlia node here: https://github.com/cgrotz/kademlia-example
 
 # Usage
 Simply include Kademlia as a dependency in your code:
@@ -10,7 +11,7 @@ Simply include Kademlia as a dependency in your code:
 <dependency>
     <groupId>de.cgrotz</groupId>
     <artifactId>kademlia</artifact>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
 </dependency>
 ```
 
