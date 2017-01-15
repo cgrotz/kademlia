@@ -11,15 +11,13 @@ import de.cgrotz.kademlia.routing.RoutingTable;
 import de.cgrotz.kademlia.server.KademliaServer;
 import de.cgrotz.kademlia.storage.InMemoryStorage;
 import de.cgrotz.kademlia.storage.LocalStorage;
-import io.netty.util.internal.ConcurrentSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.DatagramSocket;
+import java.net.SocketException;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -74,7 +72,11 @@ public class Kademlia {
                 .advertisedListeners(config.getAdvertisedListeners())
                 .build();
 
-        this.client = new KademliaClient(config, localNode);
+        try {
+            this.client = new KademliaClient(new DatagramSocket(), config, localNode);
+        } catch (SocketException e) {
+            throw new RuntimeException("Couldn't start client", e);
+        }
 
         this.routingTable = new RoutingTable(config.getKValue(), config.getNodeId(), client);
         this.localStorage =  localStorage;
@@ -82,8 +84,12 @@ public class Kademlia {
         config.getListeners().stream().filter(listener -> listener instanceof UdpListener)
                 .map(listener -> (UdpListener)listener)
                 .forEach( listener ->  {
-                    this.servers.add(new KademliaServer(listener.getHost(), listener.getPort(),
-                            config.getKValue(), routingTable, localStorage, localNode, eventListeners));
+                    try {
+                        this.servers.add(new KademliaServer(listener.getHost(), listener.getPort(),
+                                config.getKValue(), routingTable, localStorage, localNode, eventListeners));
+                    } catch (SocketException e) {
+                        e.printStackTrace();
+                    }
                 });
     }
 
@@ -146,7 +152,7 @@ public class Kademlia {
             valueReplyConsumer.accept(new ValueReply(-1,localNode, key, localStorage.get(key).getContent()));
         }
         else {
-            ConcurrentSet<Node> alreadyCheckedNodes = new ConcurrentSet<>();
+            HashSet<Node> alreadyCheckedNodes = new HashSet<>();
             AtomicBoolean found = new AtomicBoolean(false);
             List<Node> nodes = routingTable.getBucketStream()
                     .flatMap(bucket -> bucket.getNodes().stream())
@@ -162,7 +168,7 @@ public class Kademlia {
         }
     }
 
-    private void get(AtomicBoolean found, Key key, List<Node> nodes, ConcurrentSet<Node> alreadyCheckedNodes, Consumer<ValueReply> valueReplyConsumer) {
+    private void get(AtomicBoolean found, Key key, List<Node> nodes, HashSet<Node> alreadyCheckedNodes, Consumer<ValueReply> valueReplyConsumer) {
         for( Node node : nodes) {
             if(!alreadyCheckedNodes.contains(node) && !found.get()) {
                 client.sendFindValue(node,

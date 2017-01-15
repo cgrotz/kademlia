@@ -1,12 +1,8 @@
 package de.cgrotz.kademlia.config;
 
-import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
-
-import java.net.MalformedURLException;
-import java.net.URL;
 
 /**
  * Created by Christoph on 30.09.2016.

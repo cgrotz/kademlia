@@ -8,16 +8,13 @@ import de.cgrotz.kademlia.exception.TimeoutException;
 import de.cgrotz.kademlia.node.Key;
 import de.cgrotz.kademlia.node.Node;
 import de.cgrotz.kademlia.protocol.*;
-import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.DatagramPacket;
-import io.netty.channel.socket.nio.NioDatagramChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.security.SecureRandom;
 import java.util.List;
@@ -33,28 +30,17 @@ public class KademliaClient {
     private static SecureRandom random = new SecureRandom();
 
     private final KademliaClientHandler kademliaClientHandler;
-    private final Bootstrap bootstrap;
     private final Configuration config;
     private final Node localNode;
-    private final NioEventLoopGroup group;
+    private final DatagramSocket socket;
 
     private Codec codec = new Codec();
 
-    public KademliaClient(Configuration config, Node localNode) {
+    public KademliaClient(DatagramSocket socket, Configuration config, Node localNode) {
         this.localNode = localNode;
         this.config = config;
-        this.group = new NioEventLoopGroup();
-
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            group.shutdownGracefully();
-        }));
-
-        this.bootstrap = new Bootstrap();
+        this.socket = socket;
         kademliaClientHandler = new KademliaClientHandler();
-        bootstrap.group(group)
-                .channel(NioDatagramChannel.class)
-                .option(ChannelOption.SO_BROADCAST, false)
-                .handler(kademliaClientHandler);
     }
 
     private void send(Node node, long seqId, Message msg, Consumer<Message> consumer) throws TimeoutException, NoMatchingListener {
@@ -70,21 +56,22 @@ public class KademliaClient {
                 .retries(3)
                 .sender(() -> {
                     try {
-                        Channel channel = bootstrap.bind(0).sync().channel();
-                        LOGGER.debug("requesting seqId={} msg={} on host={}:{}", seqId, msg, udpListener.getHost(), udpListener.getPort());
-                        channel.writeAndFlush(new DatagramPacket(
-                                codec.encode(msg),
-                                new InetSocketAddress(udpListener.getHost(), udpListener.getPort()))).sync();
-
-                        if (!channel.closeFuture().await(config.getNetworkTimeoutMs())) {
-                            LOGGER.warn("request with seqId={} on node={} timed out.", seqId, localNode);
-                            throw new RuntimeException("request with seqId="+seqId+" on node="+localNode+" timed out.");
-                        }
-                    } catch (InterruptedException e) {
-                        throw new TimeoutException();
+                        byte[] payload = codec.encode(msg);
+                        socket.send(new DatagramPacket(
+                                payload,
+                                payload.length,
+                                new InetSocketAddress(udpListener.getHost(), udpListener.getPort())));
+                        byte[] receiveData = new byte[1024];
+                        DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+                        socket.receive(receivePacket);
+                        kademliaClientHandler.handle(receiveData, receivePacket);
                     } catch (UnsupportedEncodingException e) {
                         LOGGER.error("unsupported encoding for encoding msg", e);
                         throw new RuntimeException(e);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    } catch (Exception e) {
+                        e.printStackTrace();
                     }
                 }).build().execute();
     }
@@ -134,10 +121,6 @@ public class KademliaClient {
     }
 
     public void close() {
-        try {
-            group.shutdownGracefully().await();
-        } catch (InterruptedException e) {
-
-        }
+        socket.close();
     }
 }
