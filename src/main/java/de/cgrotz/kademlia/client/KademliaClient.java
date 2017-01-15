@@ -17,7 +17,9 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.security.SecureRandom;
+import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.*;
 import java.util.function.Consumer;
 
 /**
@@ -35,6 +37,8 @@ public class KademliaClient {
     private final DatagramSocket socket;
 
     private Codec codec = new Codec();
+    private final Duration timeout = Duration.ofSeconds(30);
+    private ExecutorService executor = Executors.newSingleThreadExecutor();
 
     public KademliaClient(DatagramSocket socket, Configuration config, Node localNode) {
         this.localNode = localNode;
@@ -61,10 +65,23 @@ public class KademliaClient {
                                 payload,
                                 payload.length,
                                 new InetSocketAddress(udpListener.getHost(), udpListener.getPort())));
-                        byte[] receiveData = new byte[1024];
-                        DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
-                        socket.receive(receivePacket);
-                        kademliaClientHandler.handle(receiveData, receivePacket);
+
+                        final Future future = executor.submit(new Callable() {
+                            @Override
+                            public String call() throws Exception {
+                                byte[] receiveData = new byte[1024];
+                                DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+                                socket.receive(receivePacket);
+                                kademliaClientHandler.handle(receiveData, receivePacket);
+                                return null;
+                            }
+                        });
+
+                        try {
+                            future.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
+                        } catch (TimeoutException e) {
+                            future.cancel(true);
+                        }
                     } catch (UnsupportedEncodingException e) {
                         LOGGER.error("unsupported encoding for encoding msg", e);
                         throw new RuntimeException(e);
@@ -121,6 +138,7 @@ public class KademliaClient {
     }
 
     public void close() {
+        executor.shutdownNow();
         socket.close();
     }
 }
