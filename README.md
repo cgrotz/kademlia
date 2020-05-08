@@ -1,6 +1,8 @@
 Kademlia
 ========
 
+![Build Status](https://github.com/cgrotz/kademlia/workflows/Java%20CI%20with%20Maven/badge.svg)
+
 # Description
 This is a basic DHT implementation using the Kademlia routing protocol. It's not an implementation of a full Kademlia node.
 You can find an example implementation of a Kademlia node here: https://github.com/cgrotz/kademlia-example
