@@ -1,7 +1,7 @@
 package de.cgrotz.kademlia;
 
 import de.cgrotz.kademlia.client.KademliaClient;
-import de.cgrotz.kademlia.exception.TimeoutException;
+import de.cgrotz.kademlia.exception.KademliaTimeoutException;
 import de.cgrotz.kademlia.routing.RoutingTable;
 import de.cgrotz.kademlia.storage.LocalStorage;
 import de.cgrotz.kademlia.storage.Value;
@@ -27,7 +27,7 @@ public class KeyRepublishing {
                 try {
                     kademliaClient.sendContentToNode(node, key, value.getContent());
                 }
-                catch (TimeoutException exp) {
+                catch (KademliaTimeoutException exp) {
                     routingTable.retireNode(node);
                 }
             });

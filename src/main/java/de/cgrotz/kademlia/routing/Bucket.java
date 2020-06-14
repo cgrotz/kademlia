@@ -1,7 +1,7 @@
 package de.cgrotz.kademlia.routing;
 
 import de.cgrotz.kademlia.client.KademliaClient;
-import de.cgrotz.kademlia.exception.TimeoutException;
+import de.cgrotz.kademlia.exception.KademliaTimeoutException;
 import de.cgrotz.kademlia.node.Node;
 import de.cgrotz.kademlia.protocol.Pong;
 import lombok.Data;
@@ -46,7 +46,7 @@ public class Bucket {
                         replacementNodes.remove(replacementNodes.last());
                     }
                 });
-            } catch (TimeoutException e) {
+            } catch (KademliaTimeoutException e) {
                 nodes.remove(last);
                 nodes.add(node);
                 return;
@@ -71,7 +71,7 @@ public class Bucket {
                     nodes.add(node);
                 });
             }
-            catch(TimeoutException exp) {
+            catch(KademliaTimeoutException exp) {
                 nodes.remove(node);
             }
         });
@@ -86,7 +86,7 @@ public class Bucket {
                     nodes.add(node);
                 });
             }
-            catch(TimeoutException exp) {
+            catch(KademliaTimeoutException exp) {
                 replacementNodes.remove(node);
             }
         }
@@ -105,7 +105,7 @@ public class Bucket {
                     nodes.add(node);
                 });
             }
-            catch(TimeoutException exp) {
+            catch(KademliaTimeoutException exp) {
                 replacementNodes.remove(node);
             }
         }

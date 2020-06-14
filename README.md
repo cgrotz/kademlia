@@ -1,7 +1,9 @@
 Kademlia
 ========
-
-![Build Status](https://github.com/cgrotz/kademlia/workflows/Java%20CI%20with%20Maven/badge.svg)
+[![license](https://img.shields.io/github/license/cgrotz/kademlia.svg)](https://github.com/cgrotz/kademlia/blob/master/LICENSE)
+[![release](https://img.shields.io/github/release/cgrotz/kademlia.svg)](https://github.com/cgrotz/kademlia/releases/latest)
+[![Build](https://github.com/cgrotz/kademlia/workflows/Go/badge.svg?branch=master&event=push)](https://github.com/cgrotz/kademlia/workflows/Go/badge.svg?branch=master&event=push)
+[![CodeFactor](https://www.codefactor.io/repository/github/cgrotz/kademlia/badge)](https://www.codefactor.io/repository/github/cgrotz/kademlia)
 
 # Description
 This is a basic DHT implementation using the Kademlia routing protocol. It's not an implementation of a full Kademlia node.
@@ -18,7 +20,7 @@ Simply include Kademlia as a dependency in your code:
 ```
 
 ```java
-// In production the nodeId would preferably be static for one node
+// In production the nodeId should be static for an individual node
 Kademlia kad = new Kademlia(new NodeId(), "127.0.0.1", 9000);
 // Bootstrap using a remote server (there is no special configuration on the remote server necessary)
 kad.bootstrap("127.0.0.1", 9001);

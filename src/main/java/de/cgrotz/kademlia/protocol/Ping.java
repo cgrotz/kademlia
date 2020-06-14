@@ -1,6 +1,5 @@
 package de.cgrotz.kademlia.protocol;
 
-import de.cgrotz.kademlia.node.Key;
 import de.cgrotz.kademlia.node.Node;
 import lombok.Data;
 import lombok.EqualsAndHashCode;

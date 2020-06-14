@@ -4,6 +4,7 @@ import de.cgrotz.kademlia.client.KademliaClient;
 import de.cgrotz.kademlia.config.Listener;
 import de.cgrotz.kademlia.config.UdpListener;
 import de.cgrotz.kademlia.events.Event;
+import de.cgrotz.kademlia.exception.KademliaTimeoutException;
 import de.cgrotz.kademlia.node.Key;
 import de.cgrotz.kademlia.node.Node;
 import de.cgrotz.kademlia.protocol.ValueReply;
@@ -142,7 +143,7 @@ public class Kademlia {
         try {
             return future.get(config.getGetTimeoutMs(), TimeUnit.MILLISECONDS);
         } catch (InterruptedException | TimeoutException | ExecutionException e) {
-            throw new de.cgrotz.kademlia.exception.TimeoutException(e);
+            throw new KademliaTimeoutException(e);
         }
     }
 

@@ -21,7 +21,7 @@ import java.util.function.Consumer;
 @Data
 public class KademliaServer {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(KademliaServer.class);
+    private final Logger LOGGER;
 
     private final RoutingTable routingTable;
     private final Node localNode;
@@ -32,6 +32,8 @@ public class KademliaServer {
     private final Thread serverThread;
 
     public KademliaServer(String bindingAddress, int port, int kValue, RoutingTable routingTable, LocalStorage localStorage, Node localNode, Map<String, Consumer<Event>> eventConsumers) throws SocketException {
+        LOGGER = LoggerFactory.getLogger(KademliaServer.class.getSimpleName()+" "+localNode.getId().toString());
+
         this.routingTable = routingTable;
         this.localNode = localNode;
         this.kValue = kValue;
@@ -46,16 +48,17 @@ public class KademliaServer {
                 while(true) {
                     DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
                     socket.receive(receivePacket);
+                    LOGGER.debug("received packet {}", receivePacket);
                     serverHandler.channelRead(receivePacket, receiveData);
                     Arrays.fill(receiveData, (byte)0);
                 }
             } catch (Exception e) {
-                e.printStackTrace();
+                LOGGER.error("Failed reading from socket", e);
             }
         });
         serverThread.start();
 
-        LOGGER.info("Kademlia Listener started");
+        LOGGER.info("Kademlia listener started udp://{}:{}",bindingAddress,port );
     }
 
     public void close() {

@@ -3,7 +3,9 @@ package de.cgrotz.kademlia;
 import de.cgrotz.kademlia.config.UdpListener;
 import de.cgrotz.kademlia.node.Key;
 import de.cgrotz.kademlia.node.Node;
+import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.simple.SimpleLogger;
 
 import static org.hamcrest.MatcherAssert.*;
 import static org.hamcrest.Matchers.*;
@@ -20,6 +22,11 @@ public class KademliaNodeTest {
         "6c7950726634ef8b9f0708879067aa935313cebe",
         "2e706bd3d73524e58229ab489ce106834627a6ae"
     };
+
+    @BeforeClass
+    public static void setupTestEnvironment() {
+        System.setProperty(SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "Info");
+    }
 
     @Test
     public void bootstrapTest() {
@@ -105,7 +112,7 @@ public class KademliaNodeTest {
             assertThat(kad1.routingTable.getBuckets()[158].getNodes(), contains(kad2.localNode));
             assertThat(kad1.routingTable.getBuckets()[157].getNodes(), contains(kad3.localNode));
 
-            assertThat(kad2.routingTable.getBuckets()[158].getNodes(), contains(kad1.localNode, kad3.localNode));
+            assertThat(kad2.routingTable.getBuckets()[158].getNodes(), containsInAnyOrder(kad1.localNode, kad3.localNode));
 
             assertThat(kad3.routingTable.getBuckets()[157].getNodes(), containsInAnyOrder(kad1.localNode));
             assertThat(kad3.routingTable.getBuckets()[158].getNodes(), containsInAnyOrder(kad2.localNode));
