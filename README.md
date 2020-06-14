@@ -2,7 +2,7 @@ Kademlia
 ========
 [![license](https://img.shields.io/github/license/cgrotz/kademlia.svg)](https://github.com/cgrotz/kademlia/blob/master/LICENSE)
 [![release](https://img.shields.io/github/release/cgrotz/kademlia.svg)](https://github.com/cgrotz/kademlia/releases/latest)
-[![Build](https://github.com/cgrotz/kademlia/workflows/Java%20CI%20with%20Maven/badge.svg?branch=master&event=push)](https://github.com/cgrotz/kademlia/workflows/Java%20CI%20with%20Maven/badge.svg?branch=master&event=push)
+[![Build](https://github.com/cgrotz/kademlia/workflows/Java%20CI%20with%20Maven/badge.svg?branch=master&event=push)](https://github.com/cgrotz/kademlia/actions?query=workflow%3A%22Java+CI+with+Maven%22)
 [![CodeFactor](https://www.codefactor.io/repository/github/cgrotz/kademlia/badge)](https://www.codefactor.io/repository/github/cgrotz/kademlia)
 
 # Description
