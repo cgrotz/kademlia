@@ -2,7 +2,7 @@ Kademlia
 ========
 [![license](https://img.shields.io/github/license/cgrotz/kademlia.svg)](https://github.com/cgrotz/kademlia/blob/master/LICENSE)
 [![release](https://img.shields.io/github/release/cgrotz/kademlia.svg)](https://github.com/cgrotz/kademlia/releases/latest)
-[![Build](https://github.com/cgrotz/kademlia/workflows/Go/badge.svg?branch=master&event=push)](https://github.com/cgrotz/kademlia/workflows/Go/badge.svg?branch=master&event=push)
+[![Build](https://github.com/cgrotz/kademlia/workflows/maven/badge.svg?branch=master&event=push)](https://github.com/cgrotz/kademlia/workflows/maven/badge.svg?branch=master&event=push)
 [![CodeFactor](https://www.codefactor.io/repository/github/cgrotz/kademlia/badge)](https://www.codefactor.io/repository/github/cgrotz/kademlia)
 
 # Description
