@@ -14,7 +14,7 @@ Simply include Kademlia as a dependency in your code:
 ```xml
 <dependency>
     <groupId>de.cgrotz</groupId>
-    <artifactId>kademlia</artifact>
+    <artifactId>kademlia</artifactId>
     <version>1.0.1</version>
 </dependency>
 ```
